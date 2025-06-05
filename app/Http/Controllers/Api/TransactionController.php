@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Transaction;
+use App\Models\User;
+use App\Models\PaymentMethod; // Ensure this is imported
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-// use App\Http\Resources\TransactionCollection;
-// use App\Http\Resources\UserResource; // لعرض معلومات المستخدم مع الرصيد
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
@@ -19,58 +21,65 @@ class TransactionController extends Controller
 
     /**
      * Display a listing of the user's transactions and current balance.
-     * (إدارة الرصيد الشخصي - عرض)
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
     {
         $user = $request->user();
         $transactions = Transaction::where('user_id', $user->user_id)
                                     ->latest()
-                                    ->paginate(15);
+                                    ->paginate($request->get('limit', 15));
 
-        // حساب الرصيد الحالي (يمكن تحسين هذا بجعل الرصيد حقل في جدول المستخدمين يتم تحديثه)
-        $credits = Transaction::where('user_id', $user->user_id)->where('transaction_type', 'credit')->sum('amount');
-        $debits = Transaction::where('user_id', $user->user_id)->where('transaction_type', 'debit')->sum('amount');
-        $currentBalance = $credits - $debits;
+        // Calculate current balance on the fly
+        $currentBalance = Transaction::where('user_id', $user->user_id)
+                                    ->sum(DB::raw('CASE WHEN transaction_type = "credit" THEN amount ELSE -amount END'));
 
         return response()->json([
-            'balance' => $currentBalance,
-            'transactions' => $transactions // أو TransactionCollection
+            'balance' => number_format($currentBalance, 2),
+            'currency' => 'USD', // Or your local currency
+            'transactions' => $transactions
         ]);
     }
 
     /**
-     * Add funds to user's balance. (إدارة الرصيد الشخصي - إضافة)
-     * هذا يتطلب تكامل مع بوابة دفع. هنا مثال مبسط لإنشاء معاملة إيداع.
+     * Add funds to user's balance.
+     * This method simulates adding funds. In a real application, this would integrate with a payment gateway.
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function addFunds(Request $request)
     {
         $user = $request->user();
-        // TODO: Validation
+
         $validator = Validator::make($request->all(), [
-            'amount' => 'required|numeric|min:1',
-            'payment_method_id' => 'required|exists:payment_methods,payment_method_id', // مثال
-            // ... (بيانات بوابة الدفع مثل رقم البطاقة إلخ، لكن هذا لا يجب تخزينه مباشرة)
+            'amount' => ['required', 'numeric', 'min:1'],
+            'payment_method_id' => ['required', Rule::exists('payment_methods', 'id')],
+            // In a real app, payment gateway tokens/details would be here, not directly stored.
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // TODO: هنا يتم منطق التكامل مع بوابة الدفع
-        // بعد نجاح الدفع من البوابة:
-        $transaction = Transaction::create([
-            'user_id' => $user->user_id,
-            'transaction_type' => 'credit',
-            'amount' => $request->amount,
-            'reason' => 'deposit',
-            // 'booking_id' => null, // لا يوجد حجز مرتبط بالإيداع المباشر
-            'transaction_date' => now(),
-        ]);
+        // Simulate successful payment gateway transaction
+        DB::beginTransaction();
+        try {
+            $transaction = Transaction::create([
+                'user_id' => $user->user_id,
+                'amount' => $request->amount,
+                'transaction_type' => 'credit',
+                'reason' => 'deposit',
+                'transaction_date' => now(),
+                'booking_id' => null, // Not related to a booking
+            ]);
 
-        return response()->json([
-            'message' => 'تم إضافة الرصيد بنجاح (محاكاة)',
-            'transaction' => $transaction // أو TransactionResource
-        ], 201);
+            DB::commit();
+            return response()->json(['message' => 'Funds added successfully (simulated).', 'transaction' => $transaction], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to add funds: ' . $e->getMessage()], 500);
+        }
     }
 }

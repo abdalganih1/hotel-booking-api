@@ -9,44 +9,24 @@ use Illuminate\Http\Request;
 class FaqController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of the FAQs.
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function index()
+    public function index(Request $request)
     {
-        $faqs = Faq::all();
-        // return new FaqCollection($faqs);
+        $faqs = Faq::paginate($request->get('limit', 15)); // Add pagination
         return response()->json($faqs);
     }
 
     /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
+     * Display the specified FAQ.
+     * @param Faq $faq
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show(Faq $faq)
     {
-        //
+        return response()->json($faq);
     }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Faq $faq)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Faq $faq)
-    {
-        //
-    }
+    // No store, update, destroy as these are admin-only operations in API
 }

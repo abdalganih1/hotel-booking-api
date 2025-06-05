@@ -5,29 +5,42 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Hotel;
 use Illuminate\Http\Request;
-// use App\Http\Resources\HotelResource;
-// use App\Http\Resources\HotelCollection;
 
 class HotelController extends Controller
 {
     /**
-     * Display a listing of the resource. (عرض الفنادق)
+     * Display a listing of the hotels.
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
     {
-        // TODO: Pagination, Filtering (by location, rating, etc.)
-        $hotels = Hotel::with('rooms')->paginate(15); // مثال مع الغرف
-        // return new HotelCollection($hotels);
+        $query = Hotel::with('rooms');
+
+        // Filtering by location
+        if ($request->filled('location')) {
+            $query->where('location', 'like', '%' . $request->location . '%');
+        }
+
+        // Filtering by rating (minimum)
+        if ($request->filled('min_rating')) {
+            $query->where('rating', '>=', $request->min_rating);
+        }
+
+        // Pagination
+        $hotels = $query->paginate($request->get('limit', 15)); // Default 15 items per page
+
         return response()->json($hotels);
     }
 
     /**
-     * Display the specified resource. (عرض تفاصيل فندق وغرفه)
+     * Display the specified hotel details.
+     * @param Hotel $hotel
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show(Hotel $hotel)
     {
-        $hotel->load('rooms'); // تحميل الغرف المتعلقة بالفندق
-        // return new HotelResource($hotel);
+        $hotel->load('rooms'); // Eager load rooms for the hotel
         return response()->json($hotel);
     }
 }

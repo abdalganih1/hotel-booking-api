@@ -6899,9 +6899,9 @@ use App\Http\Controllers\Web\Admin\HotelController as WebAdminHotelController;
 use App\Http\Controllers\Web\Admin\RoomController as WebAdminRoomController; // Import the Room Controller
 use App\Http\Controllers\Web\Admin\FaqController as WebAdminFaqController;
 use App->Http\Controllers\Web->Admin->HotelAdminRequestController as WebAdminHotelAdminRequestController;
-use App->Http->Controllers->Web->Admin->FinancialController as WebAdminFinancialController;
-use App->Http->Controllers->Web->Admin->PaymentMethodController as WebAdminPaymentMethodController;
-use App->Http->Controllers->Web->Admin->BookingController as WebAdminBookingController;
+use App\Http\Controllers\Web->Admin->FinancialController as WebAdminFinancialController;
+use App\Http\Controllers\Web->Admin->PaymentMethodController as WebAdminPaymentMethodController;
+use App\Http\Controllers\Web->Admin->BookingController as WebAdminBookingController;
 
 
 /*

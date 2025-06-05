@@ -26,6 +26,7 @@ class BookingFactory extends Factory
         return [
             'user_id' => $user->user_id,
             'room_id' => $room->room_id,
+            'hotel_id' => $room->hotel->hotel_id,
             'booking_status' => $status,
             'booking_date' => $this->faker->dateTimeBetween('-1 year', 'now'),
             'check_in_date' => $checkInDate,

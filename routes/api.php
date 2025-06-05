@@ -3,30 +3,32 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-// Import Controllers
+// --- Import Core API Controllers ---
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\HotelController;
 use App\Http\Controllers\Api\RoomController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\TransactionController;
-use App\Http\Controllers\Api\FaqController as PublicFaqController; // Alias to avoid conflict
+use App\Http\Controllers\Api\FaqController as PublicFaqController; // Alias to avoid conflict with admin FAQ controller
 use App\Http\Controllers\Api\HotelAdminRequestController;
 use App\Http\Controllers\Api\PaymentMethodController;
-use App\Http\Controllers\Api\UserController; // For user profile
+use App\Http\Controllers\Api\UserController; // For general user profile management by the user themselves
 
-// Admin Namespace Controllers
+// --- Import Admin Specific API Controllers ---
 use App\Http\Controllers\Api\Admin\AdminUserController;
 use App\Http\Controllers\Api\Admin\AdminHotelController;
 use App\Http\Controllers\Api\Admin\AdminFaqController;
 use App\Http\Controllers\Api\Admin\AdminHotelAdminRequestController;
 use App\Http\Controllers\Api\Admin\AdminFinancialController;
-use App\Http\Controllers\Api\Admin\AdminRoomController; // If admin can manage rooms globally
-use App\Http\Controllers\Api\Admin\AdminBookingController; // If admin can manage bookings globally
+// If you plan to manage all rooms/bookings globally via API for app admin:
+use App\Http\Controllers\Api\Admin\AdminRoomController;
+use App\Http\Controllers\Api\Admin\AdminBookingController;
 
-// HotelAdmin Namespace Controllers
+// --- Import Hotel Admin Specific API Controllers ---
 use App\Http\Controllers\Api\HotelAdmin\HotelAdminHotelController;
 use App\Http\Controllers\Api\HotelAdmin\HotelAdminRoomController;
 use App\Http\Controllers\Api\HotelAdmin\HotelAdminBookingController;
+use App\Http\Controllers\Api\HotelAdmin\HotelAdminFinancialController; // For hotel admin's own financial overview
 
 /*
 |--------------------------------------------------------------------------
@@ -39,88 +41,118 @@ use App\Http\Controllers\Api\HotelAdmin\HotelAdminBookingController;
 |
 */
 
-// --- Authentication Routes ---
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+// --- 1. Authentication Routes (Publicly Accessible) ---
+Route::post('/register', [AuthController::class, 'register'])->name('api.register');
+Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 
-// --- Publicly Accessible Routes (No Auth Required) ---
+// --- 2. Publicly Accessible Data Routes (No Auth Required) ---
+// Hotels: List all hotels with basic info
 Route::get('/hotels', [HotelController::class, 'index'])->name('api.hotels.index');
+// Hotels: Show specific hotel details (including its rooms)
 Route::get('/hotels/{hotel}', [HotelController::class, 'show'])->name('api.hotels.show');
-Route::get('/rooms/{room}', [RoomController::class, 'show'])->name('api.rooms.show'); // Show specific room details
-Route::get('/faqs', [PublicFaqController::class, 'index'])->name('api.faqs.index.public');
-Route::get('/payment-methods', [PaymentMethodController::class, 'index'])->name('api.paymentmethods.index.public'); // If payment methods are public
+// Rooms: Show specific room details
+Route::get('/rooms', [RoomController::class, 'index'])->name('api.rooms.index');
+Route::get('/rooms/{room}', [RoomController::class, 'show'])->name('api.rooms.show');
+// FAQs: List all frequently asked questions
+Route::get('/faqs', [PublicFaqController::class, 'index'])->name('api.faqs.index');
+// Payment Methods: List all available payment methods
+Route::get('/payment-methods', [PaymentMethodController::class, 'index'])->name('api.payment_methods.index');
 
-// --- Authenticated User Routes (All Roles - 'user', 'hotel_admin', 'app_admin') ---
+
+// --- 3. Authenticated User Routes (Require Sanctum Token) ---
+// These routes are accessible by any authenticated user (user, hotel_admin, app_admin).
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
-    Route::get('/user', [AuthController::class, 'user'])->name('api.auth.user'); // Get authenticated user details
 
-    // User Profile Management (Example - can be expanded)
+    // Auth Actions
+    Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
+    Route::get('/user', [AuthController::class, 'user'])->name('api.user'); // Get current authenticated user's details
+
+    // User Profile Management
     Route::get('/profile', [UserController::class, 'showProfile'])->name('api.profile.show');
     Route::put('/profile', [UserController::class, 'updateProfile'])->name('api.profile.update');
+    // Route::delete('/profile', [UserController::class, 'destroyProfile'])->name('api.profile.destroy'); // If user can delete their own profile
 
-    // Bookings for authenticated user
-    Route::get('/my-bookings', [BookingController::class, 'index'])->name('api.bookings.my');
+    // Bookings: List current user's bookings
+    Route::get('/my-bookings', [BookingController::class, 'index'])->name('api.bookings.my.index');
+    // Bookings: Create a new booking
     Route::post('/bookings', [BookingController::class, 'store'])->name('api.bookings.store');
-    Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('api.bookings.show.user'); // User's specific booking
-    Route::post('/bookings/{booking}/cancel', [BookingController::class, 'requestCancellation'])->name('api.bookings.cancel');
+    // Bookings: Show specific booking details for current user
+    Route::get('/my-bookings/{booking}', [BookingController::class, 'show'])->name('api.bookings.my.show');
+    // Bookings: Request cancellation for a booking
+    Route::post('/my-bookings/{booking}/cancel', [BookingController::class, 'requestCancellation'])->name('api.bookings.cancel');
 
-    // Transactions and Balance for authenticated user
-    Route::get('/my-balance', [TransactionController::class, 'index'])->name('api.balance.my');
+    // Financials: View current user's balance and transactions
+    Route::get('/my-balance', [TransactionController::class, 'index'])->name('api.balance.my.index');
+    // Financials: Add funds to user's balance
     Route::post('/add-funds', [TransactionController::class, 'addFunds'])->name('api.balance.add');
 
-    // Hotel Admin Role Requests
-    Route::post('/hotel-admin-requests', [HotelAdminRequestController::class, 'store'])->name('api.hoteladminrequests.store');
-    Route::get('/my-hotel-admin-requests', [HotelAdminRequestController::class, 'index'])->name('api.hoteladminrequests.my');
+    // Hotel Admin Request: Submit a request to become a hotel admin
+    Route::post('/hotel-admin-requests', [HotelAdminRequestController::class, 'store'])->name('api.hotel_admin_requests.store');
+    // Hotel Admin Request: View current user's hotel admin requests
+    Route::get('/my-hotel-admin-requests', [HotelAdminRequestController::class, 'index'])->name('api.hotel_admin_requests.my.index');
+    Route::get('/my-hotel-admin-requests/{hotelAdminRequest}', [HotelAdminRequestController::class, 'show'])->name('api.hotel_admin_requests.my.show');
 });
 
 
-// --- Hotel Admin Specific Routes ---
-Route::middleware(['auth:sanctum', 'role:hotel_admin'])->prefix('hotel-admin')->name('api.hoteladmin.')->group(function () {
-    // Hotel Management (their specific hotel)
-    Route::get('/hotel', [HotelAdminHotelController::class, 'showHotelDetails'])->name('hotel.details');
-    Route::put('/hotel', [HotelAdminHotelController::class, 'updateHotelDetails'])->name('hotel.update');
-    Route::get('/hotel/balance', [HotelAdminHotelController::class, 'showHotelBalance'])->name('hotel.balance');
+// --- 4. Hotel Admin Specific API Routes (Require 'hotel_admin' Role) ---
+// These routes are for hotel administrators to manage their assigned hotel.
+Route::middleware(['auth:sanctum', 'role:hotel_admin'])->prefix('hotel-admin')->name('api.hotel_admin.')->group(function () {
 
-    // Room Management for their hotel
+    // Hotel Management (Their specific hotel)
+    Route::get('/hotel', [HotelAdminHotelController::class, 'showHotelDetails'])->name('hotel.show');
+    Route::put('/hotel', [HotelAdminHotelController::class, 'updateHotelDetails'])->name('hotel.update');
+    // Note: Deleting a hotel is typically an App Admin task.
+
+    // Rooms Management (for their specific hotel)
+    // Uses shallow nesting, so /hotel-admin/rooms/{room} is global for their rooms.
     Route::apiResource('rooms', HotelAdminRoomController::class); // index, store, show, update, destroy
 
-    // Booking Management for their hotel
+    // Bookings Management (for their specific hotel)
     Route::get('/bookings', [HotelAdminBookingController::class, 'index'])->name('bookings.index');
     Route::get('/bookings/{booking}', [HotelAdminBookingController::class, 'show'])->name('bookings.show');
-    Route::patch('/bookings/{booking}/status', [HotelAdminBookingController::class, 'updateBookingStatus'])->name('bookings.updatestatus');
+    Route::patch('/bookings/{booking}/status', [HotelAdminBookingController::class, 'updateBookingStatus'])->name('bookings.update_status');
+
+    // Financial Overview (for their specific hotel earnings)
+    Route::get('/financials', [HotelAdminFinancialController::class, 'index'])->name('financials.index');
 });
 
 
-// --- Application Admin Specific Routes ---
+// --- 5. Application Admin Specific API Routes (Require 'app_admin' Role) ---
+// These routes are for the main application administrator to manage the entire platform.
 Route::middleware(['auth:sanctum', 'role:app_admin'])->prefix('admin')->name('api.admin.')->group(function () {
-    // User Management
+
+    // User Management (Global)
     Route::apiResource('users', AdminUserController::class);
 
-    // Hotel Management (Global)
+    // Hotel Management (Global CRUD)
     Route::apiResource('hotels', AdminHotelController::class);
-    // If admin needs to manage rooms globally (e.g., for any hotel)
-    Route::apiResource('hotels.rooms', AdminRoomController::class)->shallow(); // Example: /admin/hotels/{hotel}/rooms AND /admin/rooms/{room}
 
-    // FAQ Management
+    // Rooms Management (Global, potentially nested under hotels or standalone)
+    // Using shallow nesting for convenience: /admin/hotels/{hotel}/rooms or /admin/rooms/{room}
+    // If you need global room management: Route::apiResource('rooms', AdminRoomController::class);
+    // If you need nested only: Route::apiResource('hotels.rooms', AdminRoomController::class);
+    // As per previous plan, we used shallow:
+    Route::apiResource('hotels.rooms', AdminRoomController::class)->shallow();
+
+    // FAQ Management (Global CRUD)
     Route::apiResource('faqs', AdminFaqController::class);
 
-    // Hotel Admin Requests Management
-    Route::get('hotel-admin-requests', [AdminHotelAdminRequestController::class, 'index'])->name('hoteladminrequests.index');
-    Route::get('hotel-admin-requests/{hotelAdminRequest}', [AdminHotelAdminRequestController::class, 'show'])->name('hoteladminrequests.show');
-    Route::patch('hotel-admin-requests/{hotelAdminRequest}/status', [AdminHotelAdminRequestController::class, 'updateRequestStatus'])->name('hoteladminrequests.updatestatus');
+    // Hotel Admin Requests Management (Reviewing requests)
+    Route::get('hotel-admin-requests', [AdminHotelAdminRequestController::class, 'index'])->name('hotel_admin_requests.index');
+    Route::get('hotel-admin-requests/{hotelAdminRequest}', [AdminHotelAdminRequestController::class, 'show'])->name('hotel_admin_requests.show');
+    Route::patch('hotel-admin-requests/{hotelAdminRequest}/status', [AdminHotelAdminRequestController::class, 'updateRequestStatus'])->name('hotel_admin_requests.update_status');
 
-    // Financial Management & Reports
-    Route::get('financial/overview', [AdminFinancialController::class, 'financialOverview'])->name('financial.overview');
-    Route::get('financial/transactions', [AdminFinancialController::class, 'listAllTransactions'])->name('financial.transactions.list');
-    Route::post('financial/bookings/{booking}/process-commissions', [AdminFinancialController::class, 'processCommissionsForBooking'])->name('financial.bookings.processcommissions');
+    // Financial Management & Reports (Global)
+    Route::get('financials/overview', [AdminFinancialController::class, 'financialOverview'])->name('financials.overview');
+    Route::get('financials/transactions', [AdminFinancialController::class, 'listAllTransactions'])->name('financials.transactions.list');
+    Route::post('financials/bookings/{booking}/process-commissions', [AdminFinancialController::class, 'processCommissionsForBooking'])->name('financials.bookings.process_commissions');
 
-    // Payment Methods Management (if admin manages them)
-    Route::apiResource('payment-methods', PaymentMethodController::class)->except(['index']); // index is public
+    // Payment Methods Management (Global CRUD)
+    Route::apiResource('payment-methods', PaymentMethodController::class)->except(['index']); // Index is public
 
-    // Global Booking Management (if admin needs to view/manage all bookings)
-    // Example, adjust if needed
-    Route::get('bookings', [AdminBookingController::class, 'index'])->name('bookings.index.all');
-    Route::get('bookings/{booking}', [AdminBookingController::class, 'show'])->name('bookings.show.all');
-    // Route::patch('bookings/{booking}/status', [AdminBookingController::class, 'updateStatus'])->name('bookings.updatestatus.all'); // If admin can change status
+    // Booking Management (Global View/Monitor)
+    // If app admin needs to manage all bookings globally:
+    Route::apiResource('bookings', AdminBookingController::class)->only(['index', 'show']); // Only index and show by default
+    // If app admin needs to update status of any booking: Route::patch('bookings/{booking}/status', [AdminBookingController::class, 'updateStatus'])->name('bookings.update_status');
+
 });

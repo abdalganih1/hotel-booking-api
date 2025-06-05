@@ -5,47 +5,51 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Room;
+use App\Models\Transaction; // For financial operations
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
-// use App\Http\Resources\BookingResource;
-// use App\Http\Resources\BookingCollection;
+use Illuminate\Support\Facades\DB; // For database transactions
 
 class BookingController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:sanctum'); // حماية جميع الدوال
+        $this->middleware('auth:sanctum');
     }
 
     /**
-     * Display a listing of the user's bookings. (عرض سجل الحجوزات الشخصية)
+     * Display a listing of the user's bookings.
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
     {
         $user = $request->user();
         $bookings = Booking::where('user_id', $user->user_id)
-                            ->with(['room.hotel']) // جلب معلومات الغرفة والفندق
+                            ->with(['room.hotel', 'user']) // Eager load room and hotel (via room)
                             ->latest()
-                            ->paginate(10);
-        // return new BookingCollection($bookings);
+                            ->paginate($request->get('limit', 10));
+
         return response()->json($bookings);
     }
 
     /**
-     * Store a newly created booking in storage. (حجز غرفة)
+     * Store a newly created booking.
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
         $user = $request->user();
 
-        // TODO: Validation
         $validator = Validator::make($request->all(), [
-            'room_id' => 'required|exists:rooms,room_id',
-            'check_in_date' => 'required|date|after_or_equal:today',
-            'check_out_date' => 'required|date|after:check_in_date',
-            'user_notes' => 'nullable|string',
+            'room_id' => ['required', Rule::exists('rooms', 'room_id')],
+            'check_in_date' => ['required', 'date', 'after_or_equal:today'],
+            'check_out_date' => ['required', 'date', 'after:check_in_date'],
+            'user_notes' => ['nullable', 'string', 'max:500'],
         ]);
 
         if ($validator->fails()) {
@@ -54,77 +58,130 @@ class BookingController extends Controller
 
         $room = Room::findOrFail($request->room_id);
 
-        // TODO: Check room availability for the selected dates
-        // TODO: Check user balance (هذه عملية معقدة قد تتضمن transactions)
-
         $checkIn = Carbon::parse($request->check_in_date);
         $checkOut = Carbon::parse($request->check_out_date);
         $durationNights = $checkOut->diffInDays($checkIn);
         $totalPrice = $durationNights * $room->price_per_night;
 
-        // خصم الرصيد (مثال مبسط، يجب أن يكون transaction آمن)
-        // if ($user->balance < $totalPrice) {
-        //     return response()->json(['message' => 'رصيد غير كافٍ'], 400);
-        // }
-        // $user->decrement('balance', $totalPrice); // مثال
+        // TODO: Real-world availability check: ensure room is available for selected dates
+        // This is complex and might involve checking existing bookings for overlaps.
+        // For simplicity, we assume availability for now.
 
-        $booking = Booking::create([
-            'user_id' => $user->user_id,
-            'room_id' => $room->room_id,
-            'hotel_id' => $room->hotel_id, // denormalized
-            'booking_status' => 'pending_verification', // الحالة الأولية
-            'booking_date' => Carbon::now(),
-            'check_in_date' => $checkIn,
-            'check_out_date' => $checkOut,
-            'duration_nights' => $durationNights,
-            'total_price' => $totalPrice,
-            'user_notes' => $request->user_notes,
-        ]);
+        // Financial Logic: User's balance check and debit
+        // This requires the 'transactions' table to accurately represent balance.
+        $currentBalance = Transaction::where('user_id', $user->user_id)
+                                    ->sum(DB::raw('CASE WHEN transaction_type = "credit" THEN amount ELSE -amount END'));
 
-        // TODO: إنشاء معاملة مالية (transaction) لخصم المبلغ
-        // Transaction::create([...]);
+        if ($currentBalance < $totalPrice) {
+            return response()->json(['message' => 'Insufficient balance. Please add funds.'], 400);
+        }
 
-        // return new BookingResource($booking->load(['room.hotel']));
-        return response()->json($booking->load(['room.hotel']), 201);
+        DB::beginTransaction();
+        try {
+            // Debit user's balance for the booking
+            Transaction::create([
+                'user_id' => $user->user_id,
+                'booking_id' => null, // Will be updated after booking creation
+                'amount' => $totalPrice,
+                'transaction_type' => 'debit',
+                'reason' => 'booking_payment',
+                'transaction_date' => now(),
+            ]);
+
+            $booking = Booking::create([
+                'user_id' => $user->user_id,
+                'room_id' => $room->room_id,
+                // Denormalized hotel_id as per previous discussions for easier access
+                'hotel_id' => $room->hotel->hotel_id,
+                'booking_status' => 'pending_verification',
+                'booking_date' => Carbon::now(),
+                'check_in_date' => $checkIn,
+                'check_out_date' => $checkOut,
+                'duration_nights' => $durationNights,
+                'total_price' => $totalPrice,
+                'user_notes' => $request->user_notes,
+            ]);
+
+            // Update the booking_id for the transaction
+            Transaction::where('user_id', $user->user_id)
+                       ->whereNull('booking_id')
+                       ->where('transaction_type', 'debit')
+                       ->where('reason', 'booking_payment')
+                       ->where('amount', $totalPrice) // To prevent updating wrong transaction
+                       ->latest()
+                       ->first()
+                       ->update(['booking_id' => $booking->book_id]);
+
+            DB::commit();
+            return response()->json(['booking' => $booking->load(['room.hotel']), 'message' => 'Booking request submitted successfully. Pending verification.'], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to create booking: ' . $e->getMessage()], 500);
+        }
     }
 
     /**
-     * Display the specified booking.
+     * Display the specified booking for the authenticated user.
+     * @param Request $request
+     * @param Booking $booking
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show(Request $request, Booking $booking)
     {
-        // TODO: Authorization - Ensure the user owns this booking
         if ($request->user()->user_id !== $booking->user_id) {
-            return response()->json(['message' => 'غير مصرح به'], 403);
+            return response()->json(['message' => 'Unauthorized to view this booking.'], 403);
         }
-        // return new BookingResource($booking->load(['room.hotel']));
-        return response()->json($booking->load(['room.hotel']));
+        return response()->json($booking->load(['room.hotel', 'user', 'transactions']));
     }
 
-
     /**
-     * Request cancellation of a booking. (طلب إلغاء حجز)
+     * Request cancellation of a booking by the user.
+     * @param Request $request
+     * @param Booking $booking
+     * @return \Illuminate\Http\JsonResponse
      */
     public function requestCancellation(Request $request, Booking $booking)
     {
-        // TODO: Authorization - Ensure the user owns this booking
-        if ($request->user()->user_id !== $booking->user_id) {
-            return response()->json(['message' => 'غير مصرح به'], 403);
+        $user = $request->user();
+
+        if ($user->user_id !== $booking->user_id) {
+            return response()->json(['message' => 'Unauthorized to cancel this booking.'], 403);
         }
 
-        // TODO: Logic for cancellation (e.g., check if cancellable, apply fees)
-        // لا يمكن الإلغاء إلا إذا كان الحجز قيد التحقق أو مؤكد (ولم يمضِ وقت الإقامة)
+        // Only allow cancellation if pending or confirmed and check-in date is in future
         if (!in_array($booking->booking_status, ['pending_verification', 'confirmed'])) {
-             return response()->json(['message' => 'لا يمكن إلغاء هذا الحجز في حالته الحالية'], 400);
+            return response()->json(['message' => 'Booking cannot be cancelled in its current status.'], 400);
+        }
+        if ($booking->check_in_date->isPast()) {
+            return response()->json(['message' => 'Cannot cancel booking after check-in date.'], 400);
         }
 
-        $booking->booking_status = 'cancelled'; // أو 'cancellation_requested'
-        $booking->save();
+        DB::beginTransaction();
+        try {
+            $booking->booking_status = 'cancelled';
+            $booking->save();
 
-        // TODO: إنشاء معاملة مالية (transaction) لاسترجاع المبلغ (إذا كان ذلك ممكنًا)
-        // Transaction::create([...]);
+            // Refund the user
+            Transaction::create([
+                'user_id' => $user->user_id,
+                'booking_id' => $booking->book_id,
+                'amount' => $booking->total_price,
+                'transaction_type' => 'credit',
+                'reason' => 'booking_refund',
+                'transaction_date' => now(),
+            ]);
 
-        // return new BookingResource($booking);
-        return response()->json(['message' => 'تم طلب إلغاء الحجز بنجاح', 'booking' => $booking]);
+            // TODO: If commissions were already paid to hotel_admin/app_admin for a confirmed booking,
+            // you might need to handle clawbacks or record reversal transactions.
+            // This can get complex based on your cancellation policy.
+
+            DB::commit();
+            return response()->json(['message' => 'Booking cancelled successfully. Amount refunded to your balance.', 'booking' => $booking->load(['room.hotel'])]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to cancel booking: ' . $e->getMessage()], 500);
+        }
     }
 }

@@ -9,8 +9,8 @@ use App\Models\Hotel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-// use App\Http\Resources\HotelAdminRequestResource;
-// use App\Http\Resources\HotelAdminRequestCollection;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class AdminHotelAdminRequestController extends Controller
 {
@@ -19,67 +19,99 @@ class AdminHotelAdminRequestController extends Controller
         $this->middleware(['auth:sanctum', 'role:app_admin']);
     }
 
+    /**
+     * Display a listing of hotel admin requests.
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function index(Request $request)
     {
-        // Filter by status (pending, approved, rejected)
-        $status = $request->query('status');
-        $query = HotelAdminRequest::with('user')->latest();
+        $query = HotelAdminRequest::with('user', 'reviewer')->orderBy('created_at', 'desc');
 
-        if ($status) {
-            $query->where('request_status', $status);
+        if ($request->filled('status')) {
+            $query->where('request_status', $request->status);
         }
-        $requests = $query->paginate(15);
-        // return new HotelAdminRequestCollection($requests);
+
+        $requests = $query->paginate($request->get('limit', 15));
         return response()->json($requests);
     }
 
-    public function show(HotelAdminRequest $hotelAdminRequest) // Route model binding
+    /**
+     * Display the specified hotel admin request.
+     * @param HotelAdminRequest $hotelAdminRequest
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function show(HotelAdminRequest $hotelAdminRequest)
     {
-        // return new HotelAdminRequestResource($hotelAdminRequest->load('user'));
-        return response()->json($hotelAdminRequest->load('user'));
+        return response()->json($hotelAdminRequest->load('user', 'reviewer'));
     }
 
+    /**
+     * Update the status of the specified hotel admin request (Approve/Reject).
+     * @param Request $request
+     * @param HotelAdminRequest $hotelAdminRequest
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function updateRequestStatus(Request $request, HotelAdminRequest $hotelAdminRequest)
     {
-        // TODO: Validation
         $validator = Validator::make($request->all(), [
-            'status' => 'required|in:approved,rejected',
+            'status' => ['required', Rule::in(['approved', 'rejected'])],
+            'rejection_reason' => ['nullable', 'string', 'max:500'], // Optional for rejection
         ]);
+
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
         if ($hotelAdminRequest->request_status !== 'pending') {
-            return response()->json(['message' => 'يمكن فقط مراجعة الطلبات المعلقة.'], 400);
+            return response()->json(['message' => 'Only pending requests can be reviewed.'], 400);
         }
 
         $newStatus = $request->status;
         $hotelAdminRequest->request_status = $newStatus;
         $hotelAdminRequest->reviewed_by_user_id = Auth::id();
         $hotelAdminRequest->review_timestamp = now();
-        $hotelAdminRequest->save();
+        // $hotelAdminRequest->rejection_reason = $request->rejection_reason; // If you add this field to migration
 
-        if ($newStatus === 'approved') {
-            // 1. Upgrade user role
-            $userToUpgrade = User::find($hotelAdminRequest->user_id);
-            if ($userToUpgrade) {
+        DB::beginTransaction();
+        try {
+            $hotelAdminRequest->save();
+
+            if ($newStatus === 'approved') {
+                $userToUpgrade = User::find($hotelAdminRequest->user_id);
+
+                if (!$userToUpgrade) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Request user not found. Status updated but user not upgraded.'], 404);
+                }
+                if ($userToUpgrade->hasAnyRole(['hotel_admin', 'app_admin'])) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'User already has an admin role. No upgrade performed.'], 400);
+                }
+
                 $userToUpgrade->role = 'hotel_admin';
                 $userToUpgrade->save();
 
-                // 2. Create a new hotel (or link to an existing one if logic allows)
-                // For simplicity, creating a new hotel based on request data
-                Hotel::create([
+                // Create a new hotel based on request details, assign the new hotel admin
+                $newHotel = Hotel::create([
                     'name' => $hotelAdminRequest->requested_hotel_name,
                     'location' => $hotelAdminRequest->requested_hotel_location,
                     'contact_person_phone' => $hotelAdminRequest->requested_contact_phone,
                     'photos_json' => $hotelAdminRequest->requested_photos_json,
                     'videos_json' => $hotelAdminRequest->requested_videos_json,
-                    'notes' => 'تم إنشاؤه من طلب إدارة فندق.',
+                    'notes' => 'Created from admin request. Request ID: ' . $hotelAdminRequest->request_id,
                     'admin_user_id' => $userToUpgrade->user_id,
                 ]);
+
+                // Optionally, update the request with a link to the created hotel
+                // $hotelAdminRequest->update(['processed_hotel_id' => $newHotel->hotel_id]);
             }
+            DB::commit();
+            return response()->json(['message' => 'Request status updated successfully.', 'request' => $hotelAdminRequest]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to update request status: ' . $e->getMessage()], 500);
         }
-        // return new HotelAdminRequestResource($hotelAdminRequest);
-        return response()->json($hotelAdminRequest);
     }
 }

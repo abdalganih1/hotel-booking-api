@@ -4,82 +4,98 @@ namespace App\Http\Controllers\Api\HotelAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Hotel;
-use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
-// use App\Http\Resources\HotelResource;
-
+use App\Models\Transaction;
 class HotelAdminHotelController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth:sanctum', 'role:hotel_admin']); // Middleware للتحقق من الدور
+        $this->middleware(['auth:sanctum', 'role:hotel_admin']);
     }
 
     /**
-     * Display the hotel managed by the admin. (عرض بيانات الفندق)
+     * Get the hotel managed by the authenticated hotel admin.
      */
-    public function showHotelDetails(Request $request)
+    private function getHotelForAdmin(): Hotel
     {
-        $hotelAdmin = $request->user();
-        $hotel = Hotel::where('admin_user_id', $hotelAdmin->user_id)->with('rooms')->firstOrFail();
-        // return new HotelResource($hotel);
+        // This should always succeed because of the middleware chain and seeding
+        return Auth::user()->hotelAdminFor()->firstOrFail();
+    }
+
+    /**
+     * Display details of the hotel managed by the authenticated admin.
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function showHotelDetails()
+    {
+        $hotel = $this->getHotelForAdmin();
+        $hotel->load('rooms'); // Load rooms for hotel details
         return response()->json($hotel);
     }
 
     /**
-     * Update the specified hotel in storage. (إدارة بيانات الفندق - تفاصيل)
+     * Update details of the hotel managed by the authenticated admin.
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function updateHotelDetails(Request $request)
     {
-        $hotelAdmin = $request->user();
-        $hotel = Hotel::where('admin_user_id', $hotelAdmin->user_id)->firstOrFail();
+        $hotel = $this->getHotelForAdmin();
 
-        // TODO: Validation
         $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|required|string|max:255',
-            'rating' => 'sometimes|nullable|numeric|min:0|max:5',
-            'location' => 'sometimes|nullable|string',
-            'contact_person_phone' => 'sometimes|nullable|string',
-            'photos_json' => 'sometimes|nullable|json',
-            'videos_json' => 'sometimes|nullable|json',
-            'notes' => 'sometimes|nullable|string',
+            'name' => ['required', 'string', 'max:255', Rule::unique('hotels', 'name')->ignore($hotel->hotel_id, 'hotel_id')],
+            'location' => ['nullable', 'string'],
+            'rating' => ['nullable', 'numeric', 'min:0', 'max:5'],
+            'notes' => ['nullable', 'string'],
+            'contact_person_phone' => ['nullable', 'string', 'max:20'],
+            'photos' => ['nullable', 'array'],
+            'photos.*' => ['nullable', 'url', 'max:2048'],
+            'videos' => ['nullable', 'array'],
+            'videos.*' => ['nullable', 'url', 'max:2048'],
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $hotel->update($request->only([
-            'name', 'rating', 'location', 'contact_person_phone',
-            'photos_json', 'videos_json', 'notes'
-        ]));
+        $hotelData = $validator->validated();
+        $hotelData['photos_json'] = $hotelData['photos'] ?? [];
+        $hotelData['videos_json'] = $hotelData['videos'] ?? [];
+        unset($hotelData['photos'], $hotelData['videos']);
 
-        // return new HotelResource($hotel);
-        return response()->json($hotel);
+        $hotel->update($hotelData);
+
+        return response()->json(['hotel' => $hotel, 'message' => 'Hotel information updated successfully.']);
     }
 
-     /**
-     * Display the hotel's balance/earnings. (عرض رصيد الفندق - الأرباح)
+    /**
+     * Display financial overview for the hotel admin's hotel.
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function showHotelBalance(Request $request)
+    public function showHotelBalance()
     {
-        $hotelAdmin = $request->user();
-        // الرصيد هو مجموع معاملات 'hotel_commission' لهذا المستخدم
-        $earnings = Transaction::where('user_id', $hotelAdmin->user_id)
-                                ->where('reason', 'hotel_commission')
-                                ->sum('amount');
-
-        // يمكنك أيضًا عرض المعاملات نفسها
-        $transactions = Transaction::where('user_id', $hotelAdmin->user_id)
+        $hotelAdminUser = Auth::user();
+        // Total earnings from commissions for this hotel admin
+        $totalEarnings = Transaction::where('user_id', $hotelAdminUser->user_id)
                                     ->where('reason', 'hotel_commission')
-                                    ->latest()
-                                    ->paginate(15);
+                                    ->sum('amount');
+
+        // You might want to include recent transactions as well
+        $recentTransactions = Transaction::where('user_id', $hotelAdminUser->user_id)
+                                        ->where('reason', 'hotel_commission')
+                                        ->with('booking.user')
+                                        ->latest()
+                                        ->take(10)
+                                        ->get();
 
         return response()->json([
-            'total_earnings' => $earnings,
-            'commission_transactions' => $transactions // أو TransactionCollection
+            'total_earnings' => number_format($totalEarnings, 2),
+            'currency' => 'USD',
+            'recent_transactions' => $recentTransactions,
+            'message' => 'Financial data retrieved successfully.'
         ]);
     }
 }

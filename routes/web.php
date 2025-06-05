@@ -14,6 +14,12 @@ use App\Http\Controllers\Web\Admin\PaymentMethodController as WebAdminPaymentMet
 use App\Http\Controllers\Web\Admin\BookingController as WebAdminBookingController; // Imported
 use App\Http\Controllers\Web\Admin\RoomController as WebAdminRoomController; // Import the Room Controller
 
+use App\Http\Controllers\Web\HotelAdmin\DashboardController as HotelAdminDashboardController;
+use App\Http\Controllers\Web\HotelAdmin\HotelController as HotelAdminHotelController;
+use App\Http\Controllers\Web\HotelAdmin\RoomController as HotelAdminRoomController;
+use App\Http\Controllers\Web\HotelAdmin\BookingController as HotelAdminBookingController;
+use App\Http\Controllers\Web\HotelAdmin\FinancialController as HotelAdminFinancialController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -108,7 +114,7 @@ Route::middleware(['auth', 'role:hotel_admin'])->prefix('hotel-admin-panel')->na
     Route::put('/hotel', [HotelAdminHotelController::class, 'update'])->name('hotel.update');
 
     // Rooms Management for their specific hotel (nested under hotel)
-    Route::resource('hotel.rooms', HotelAdminRoomController::class)->parameters([
+    Route::resource('/rooms', HotelAdminRoomController::class)->parameters([
         'hotel' => 'hotel_id' // Ensure parameter name is 'hotel_id' from the URL
     ]); // This creates hotel-admin-panel/hotel/rooms (index, create, store, edit, update, show, destroy)
 

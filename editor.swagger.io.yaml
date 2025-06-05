@@ -1,0 +1,4484 @@
+openapi: 3.0.0
+info:
+  title: Integrated Hotel Reservation Platform API
+  description: |
+    API documentation for the Integrated Hotel Reservation Platform.
+    This API serves a Flutter mobile application and provides functionalities for:
+    - User authentication (registration, login, profile management)
+    - Hotel and room browsing and booking
+    - Financial transactions and balance management
+    - Hotel admin specific operations (managing their hotel, rooms, bookings)
+    - Application admin specific operations (global user, hotel, and financial management)
+  version: 1.0.0
+servers:
+  - url: http://127.0.0.1:8000/api
+    description: Local Development Server
+security:
+  - BearerAuth: []
+tags:
+  - name: Authentication
+  - name: Public
+  - name: User Operations
+  - name: Hotel Admin Operations
+  - name: App Admin Operations
+paths:
+  /register:
+    post:
+      summary: Register a new user
+      operationId: registerUser
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - password
+                - password_confirmation
+                - first_name
+              properties:
+                username:
+                  type: string
+                  description: Unique username for the user.
+                  example: user_test
+                email:
+                  type: string
+                  format: email
+                  description: Unique email address for the user.
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  description: User's password.
+                  example: stringst
+                password_confirmation:
+                  type: string
+                  format: password
+                  description: Password confirmation.
+                  example: stringst
+                first_name:
+                  type: string
+                  description: User's first name.
+                  example: John
+                last_name:
+                  type: string
+                  nullable: true
+                  description: User's last name.
+                  example: Doe
+                phone_number:
+                  type: string
+                  nullable: true
+                  description: User's phone number.
+                  example: "+1234567890"
+                address:
+                  type: string
+                  nullable: true
+                  description: User's address.
+                  example: "123 Main St"
+                gender:
+                  type: string
+                  enum: [male, female, other]
+                  nullable: true
+                  description: User's gender.
+                  example: male
+                age:
+                  type: integer
+                  nullable: true
+                  minimum: 0
+                  description: User's age.
+                  example: 30
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  access_token:
+                    type: string
+                    example: "1|pFVwMlicyQdMgaXVb5Dy43tK0YmpslzBQWB3RU6l504daf61" # Example token
+                  token_type:
+                    type: string
+                    example: "Bearer"
+                  message:
+                    type: string
+                    example: "User registered successfully." # Updated message
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /login:
+    post:
+      summary: Authenticate user and get access token
+      operationId: loginUser
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - identifier
+                - password
+              properties:
+                identifier:
+                  type: string
+                  description: User's username or email address.
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  description: User's password.
+                  example: stringst
+      responses:
+        '200':
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  access_token:
+                    type: string
+                    example: "2|QM6scGXJut8dtK5qN11A0yidIyZtU9yHmblsfHljb5590016" # Example token
+                  token_type:
+                    type: string
+                    example: "Bearer"
+                  message:
+                    type: string
+                    example: "Logged in successfully." # Updated message
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /logout:
+    post:
+      summary: Log out the authenticated user
+      operationId: logoutUser
+      tags:
+        - Authentication
+        - User Operations
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully." # Updated message
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /user:
+    get:
+      summary: Get authenticated user's details
+      operationId: getAuthenticatedUser
+      tags:
+        - Authentication
+        - User Operations
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                userObject:
+                  value:
+                    user_id: 20
+                    username: string
+                    role: user
+                    first_name: string
+                    last_name: string
+                    phone_number: string
+                    address: string
+                    gender: male
+                    age: 0
+                    email: user@example.com
+                    email_verified_at: null
+                    created_at: "2025-06-05T13:14:54.000000Z"
+                    updated_at: "2025-06-05T13:14:54.000000Z"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /profile:
+    get:
+      summary: Get authenticated user's profile information
+      operationId: getUserProfile
+      tags:
+        - User Operations
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                userProfile:
+                  value:
+                    user_id: 20
+                    username: string
+                    role: user
+                    first_name: string
+                    last_name: string
+                    phone_number: string
+                    address: string
+                    gender: male
+                    age: 0
+                    email: user@example.com
+                    email_verified_at: null
+                    created_at: "2025-06-05T13:14:54.000000Z"
+                    updated_at: "2025-06-05T13:14:54.000000Z"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    put:
+      summary: Update authenticated user's profile information
+      operationId: updateUserProfile
+      tags:
+        - User Operations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - first_name
+              properties:
+                username:
+                  type: string
+                  description: Unique username for the user.
+                email:
+                  type: string
+                  format: email
+                  description: Unique email address for the user.
+                first_name:
+                  type: string
+                  description: User's first name.
+                last_name:
+                  type: string
+                  nullable: true
+                  description: User's last name.
+                phone_number:
+                  type: string
+                  nullable: true
+                  description: User's phone number.
+                address:
+                  type: string
+                  nullable: true
+                  description: User's address.
+                gender:
+                  type: string
+                  enum: [male, female, other]
+                  nullable: true
+                  description: User's gender.
+                age:
+                  type: integer
+                  nullable: true
+                  minimum: 0
+                  description: User's age.
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  message:
+                    type: string
+                    example: "Profile updated successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /profile/password:
+    put:
+      summary: Update authenticated user's password
+      operationId: updateUserPassword
+      tags:
+        - User Operations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_password
+                - password
+                - password_confirmation
+              properties:
+                current_password:
+                  type: string
+                  format: password
+                  description: User's current password.
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  description: New password.
+                password_confirmation:
+                  type: string
+                  format: password
+                  description: New password confirmation.
+      responses:
+        '200':
+          description: Password updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password updated successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /hotels:
+    get:
+      summary: Get a list of all hotels
+      operationId: listHotels
+      tags:
+        - Public
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of hotels per page.
+        - in: query
+          name: location
+          schema:
+            type: string
+          description: Filter hotels by location.
+        - in: query
+          name: min_rating
+          schema:
+            type: number
+            format: float
+            minimum: 0
+            maximum: 5
+          description: Filter hotels by minimum rating.
+      responses:
+        '200':
+          description: List of hotels
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHotels'
+              examples:
+                paginatedHotels:
+                  value:
+                    current_page: 1
+                    data:
+                      - hotel_id: 1
+                        name: Funk-Hand Hotel
+                        location: "New Saulport, 9915 Borer Isle\nNorth Candido, DE 51913"
+                        rating: 3.8
+                        notes: Quia ipsum ea sint qui doloribus. Non accusamus neque voluptatum id dolor porro aut.
+                        contact_person_phone: "575-401-4728"
+                        admin_user_id: 7
+                        photos_json: []
+                        videos_json: []
+                        created_at: "2025-06-05T11:52:23.000000Z"
+                        updated_at: "2025-06-05T11:52:23.000000Z"
+                        rooms:
+                          - room_id: 1
+                            hotel_id: 1
+                            max_occupancy: 3
+                            price_per_night: "470.20"
+                            services: AC, TV
+                            photos_json: []
+                            videos_json: []
+                            payment_link: null
+                            notes: Quo rem suscipit nesciunt est.
+                            created_at: "2025-06-05T11:52:23.000000Z"
+                            updated_at: "2025-06-05T11:52:23.000000Z"
+                      - hotel_id: 2
+                        name: Lang, Nader and Weimann Hotel
+                        location: "South Rosaliamouth, 683 Angelica Common\r\nNew Dorianborough, DE 37301-7021"
+                        rating: 4.1
+                        notes: Dolores non eos eum dolor recusandae. Ab consectetur officia quia cumque.
+                        contact_person_phone: "+19253003335"
+                        admin_user_id: 2
+                        photos_json: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg"]
+                        videos_json: ["https://youtube.com"]
+                        created_at: "2025-06-05T11:52:23.000000Z"
+                        updated_at: "2025-06-05T12:15:22.000000Z"
+                        rooms:
+                          - room_id: 4
+                            hotel_id: 2
+                            max_occupancy: 4
+                            price_per_night: "439.97"
+                            services: AC, TV
+                            photos_json: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg", "https://supper.nl/wp-content/uploads/2023/09/MGC0116-2-HDR-copy-scaled.jpg"]
+                            videos_json: ["https://www.youtube.com/watch?v=mxLpKetxhlg", "https://www.youtube.com/watch?v=0SBiJaiF9Ow"]
+                            payment_link: "https://hotelvossiusvondelpark.com/en/"
+                            notes: Voluptas molestias minus sint nihil qui.
+                            created_at: "2025-06-05T11:52:23.000000Z"
+                            updated_at: "2025-06-05T12:18:06.000000Z"
+                    first_page_url: "http://127.0.0.1:8000/api/hotels?page=1"
+                    from: 1
+                    last_page: 1
+                    last_page_url: "http://127.0.0.1:8000/api/hotels?page=1"
+                    links:
+                      - url: null
+                        label: "&laquo; Previous"
+                        active: false
+                      - url: "http://127.0.0.1:8000/api/hotels?page=1"
+                        label: "1"
+                        active: true
+                      - url: null
+                        label: "Next &raquo;"
+                        active: false
+                    next_page_url: null
+                    path: "http://127.0.0.1:8000/api/hotels"
+                    per_page: 15
+                    prev_page_url: null
+                    to: 5
+                    total: 5
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /hotels/{hotel}:
+    get:
+      summary: Get details of a specific hotel
+      operationId: getHotelDetails
+      tags:
+        - Public
+      parameters:
+        - in: path
+          name: hotel
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the hotel to retrieve.
+          example: 2
+      responses:
+        '200':
+          description: Hotel details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hotel'
+              examples:
+                singleHotel:
+                  value:
+                    hotel_id: 2
+                    name: Lang, Nader and Weimann Hotel
+                    location: "South Rosaliamouth, 683 Angelica Common\r\nNew Dorianborough, DE 37301-7021"
+                    rating: 4.1
+                    notes: Dolores non eos eum dolor recusandae. Ab consectetur officia quia cumque.
+                    contact_person_phone: "+19253003335"
+                    admin_user_id: 2
+                    photos_json: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg"]
+                    videos_json: ["https://youtube.com"]
+                    created_at: "2025-06-05T11:52:23.000000Z"
+                    updated_at: "2025-06-05T12:15:22.000000Z"
+                    rooms:
+                      - room_id: 4
+                        hotel_id: 2
+                        max_occupancy: 4
+                        price_per_night: "439.97"
+                        services: AC, TV
+                        photos_json: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg", "https://supper.nl/wp-content/uploads/2023/09/MGC0116-2-HDR-copy-scaled.jpg"]
+                        videos_json: ["https://www.youtube.com/watch?v=mxLpKetxhlg", "https://www.youtube.com/watch?v=0SBiJaiF9Ow"]
+                        payment_link: "https://hotelvossiusvondelpark.com/en/"
+                        notes: Voluptas molestias minus sint nihil qui.
+                        created_at: "2025-06-05T11:52:23.000000Z"
+                        updated_at: "2025-06-05T12:18:06.000000Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /rooms:
+    get:
+      summary: Get a list of all rooms (can be filtered)
+      operationId: listRooms
+      tags:
+        - Public
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of rooms per page.
+        - in: query
+          name: hotel_id
+          schema:
+            type: integer
+            format: int64
+          description: Filter rooms by hotel ID.
+        - in: query
+          name: max_occupancy
+          schema:
+            type: integer
+            minimum: 1
+          description: Filter rooms by minimum occupancy.
+        - in: query
+          name: min_price
+          schema:
+            type: string # Changed to string
+            description: Filter rooms by minimum price per night.
+        - in: query
+          name: max_price
+          schema:
+            type: string # Changed to string
+            description: Filter rooms by maximum price per night.
+      responses:
+        '200':
+          description: List of rooms
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRooms'
+              examples:
+                paginatedRooms:
+                  value:
+                    current_page: 1
+                    data:
+                      - room_id: 4
+                        hotel_id: 2
+                        max_occupancy: 4
+                        price_per_night: "439.97"
+                        services: AC, TV
+                        photos_json: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg", "https://supper.nl/wp-content/uploads/2023/09/MGC0116-2-HDR-copy-scaled.jpg"]
+                        videos_json: ["https://www.youtube.com/watch?v=mxLpKetxhlg", "https://www.youtube.com/watch?v=0SBiJaiF9Ow"]
+                        payment_link: "https://hotelvossiusvondelpark.com/en/"
+                        notes: Voluptas molestias minus sint nihil qui.
+                        created_at: "2025-06-05T11:52:23.000000Z"
+                        updated_at: "2025-06-05T12:18:06.000000Z"
+                        hotel:
+                          hotel_id: 2
+                          name: Lang, Nader and Weimann Hotel
+                          location: "South Rosaliamouth, 683 Angelica Common\r\nNew Dorianborough, DE 37301-7021"
+                          rating: 4.1
+                          notes: Dolores non eos eum dolor recusandae. Ab consectetur officia quia cumque.
+                          contact_person_phone: "+19253003335"
+                          admin_user_id: 2
+                          photos_json: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg"]
+                          videos_json: ["https://youtube.com"]
+                          created_at: "2025-06-05T11:52:23.000000Z"
+                          updated_at: "2025-06-05T12:15:22.000000Z"
+                    first_page_url: "http://127.0.0.1:8000/api/rooms?page=1"
+                    from: 1
+                    last_page: 2
+                    last_page_url: "http://127.0.0.1:8000/api/rooms?page=2"
+                    links:
+                      - url: null
+                        label: "&laquo; Previous"
+                        active: false
+                      - url: "http://127.0.0.1:8000/api/rooms?page=1"
+                        label: "1"
+                        active: true
+                      - url: "http://127.0.0.1:8000/api/rooms?page=2"
+                        label: "2"
+                        active: false
+                      - url: "http://127.0.0.1:8000/api/rooms?page=2"
+                        label: "Next &raquo;"
+                        active: false
+                    next_page_url: "http://127.0.0.1:8000/api/rooms?page=2"
+                    path: "http://127.0.0.1:8000/api/rooms"
+                    per_page: 15
+                    prev_page_url: null
+                    to: 15
+                    total: 20
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /rooms/{room}:
+    get:
+      summary: Get details of a specific room
+      operationId: getRoomDetails
+      tags:
+        - Public
+      parameters:
+        - in: path
+          name: room
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the room to retrieve.
+          example: 4
+      responses:
+        '200':
+          description: Room details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+              examples:
+                singleRoom:
+                  value:
+                    room_id: 4
+                    hotel_id: 2
+                    max_occupancy: 4
+                    price_per_night: "439.97"
+                    services: AC, TV
+                    photos_json: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg", "https://supper.nl/wp-content/uploads/2023/09/MGC0116-2-HDR-copy-scaled.jpg"]
+                    videos_json: ["https://www.youtube.com/watch?v=mxLpKetxhlg", "https://www.youtube.com/watch?v=0SBiJaiF9Ow"]
+                    payment_link: "https://hotelvossiusvondelpark.com/en/"
+                    notes: Voluptas molestias minus sint nihil qui.
+                    created_at: "2025-06-05T11:52:23.000000Z"
+                    updated_at: "2025-06-05T12:18:06.000000Z"
+                    hotel:
+                      hotel_id: 2
+                      name: Lang, Nader and Weimann Hotel
+                      location: "South Rosaliamouth, 683 Angelica Common\r\nNew Dorianborough, DE 37301-7021"
+                      rating: 4.1
+                      notes: Dolores non eos eum dolor recusandae. Ab consectetur officia quia cumque.
+                      contact_person_phone: "+19253003335"
+                      admin_user_id: 2
+                      photos_json: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg"]
+                      videos_json: ["https://youtube.com"]
+                      created_at: "2025-06-05T11:52:23.000000Z"
+                      updated_at: "2025-06-05T12:15:22.000000Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /faqs:
+    get:
+      summary: Get a list of frequently asked questions
+      operationId: listFaqs
+      tags:
+        - Public
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of FAQs per page.
+      responses:
+        '200':
+          description: List of FAQs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFaqs'
+              examples:
+                paginatedFaqs:
+                  value:
+                    current_page: 1
+                    data:
+                      - id: 1
+                        user_id: 16
+                        question: كيف يمكنني حجز غرفة؟
+                        answer: يمكنك حجز غرفة عن طريق تصفح الفنادق المتاحة واختيار الغرفة المناسبة ثم اتباع خطوات الحجز.
+                        created_at: "2025-06-05T11:52:23.000000Z"
+                        updated_at: "2025-06-05T11:52:23.000000Z"
+                      - id: 2
+                        user_id: 16
+                        question: هل يمكنني إلغاء الحجز؟
+                        answer: نعم، يمكنك طلب إلغاء الحجز وفقًا لسياسة الإلغاء الخاصة بالفندق. قد يتم تطبيق رسوم.
+                        created_at: "2025-06-05T11:52:23.000000Z"
+                        updated_at: "2025-06-05T11:52:23.000000Z"
+                    first_page_url: "http://127.0.0.1:8000/api/faqs?page=1"
+                    from: 1
+                    last_page: 1
+                    last_page_url: "http://127.0.0.1:8000/api/faqs?page=1"
+                    links:
+                      - url: null
+                        label: "&laquo; Previous"
+                        active: false
+                      - url: "http://127.0.0.1:8000/api/faqs?page=1"
+                        label: "1"
+                        active: true
+                      - url: null
+                        label: "Next &raquo;"
+                        active: false
+                    next_page_url: null
+                    path: "http://127.0.0.1:8000/api/faqs"
+                    per_page: 15
+                    prev_page_url: null
+                    to: 4
+                    total: 4
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /payment-methods:
+      get:
+        summary: Get a list of available payment methods
+        operationId: listPaymentMethods
+        tags:
+          - Public
+        parameters: # Add parameters for pagination and search
+          - in: query
+            name: page
+            schema:
+              type: integer
+              default: 1
+            description: Page number to retrieve.
+          - in: query
+            name: limit
+            schema:
+              type: integer
+              default: 15
+            description: Number of items per page.
+          - in: query
+            name: search
+            schema:
+              type: string
+            description: Search by name or description.
+        responses:
+          '200':
+            description: Paginated list of payment methods
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties: # Standard Laravel pagination structure
+                    current_page:
+                      type: integer
+                      example: 1
+                    data:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/PaymentMethod' # Reference to your PaymentMethod schema
+                    first_page_url:
+                      type: string
+                      format: url
+                      example: "http://127.0.0.1:8000/api/payment-methods?page=1"
+                    from:
+                      type: integer
+                      nullable: true
+                      example: 1
+                    last_page:
+                      type: integer
+                      example: 1
+                    last_page_url:
+                      type: string
+                      format: url
+                      example: "http://127.0.0.1:8000/api/payment-methods?page=1"
+                    links: # Links for pagination (previous, next, page numbers)
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          url:
+                            type: string
+                            nullable: true
+                          label:
+                            type: string
+                          active:
+                            type: boolean
+                    next_page_url:
+                      type: string
+                      format: url
+                      nullable: true
+                      example: null
+                    path:
+                      type: string
+                      example: "http://127.0.0.1:8000/api/payment-methods"
+                    per_page:
+                      type: integer
+                      example: 15
+                    prev_page_url:
+                      type: string
+                      format: url
+                      nullable: true
+                      example: null
+                    to:
+                      type: integer
+                      nullable: true
+                      example: 4
+                    total:
+                      type: integer
+                      example: 4
+                  required:
+                    - current_page
+                    - data
+                    - first_page_url
+                    - from
+                    - last_page
+                    - last_page_url
+                    - links
+                    - path
+                    - per_page
+                    - to
+                    - total
+                examples:
+                  paymentMethodsPaginated: # Updated example name
+                    value:
+                      current_page: 1
+                      data:
+                        - id: 1
+                          name: Credit Card
+                          description: Major credit and debit cards.
+                          created_at: "2025-06-05T11:52:23.000000Z"
+                          updated_at: "2025-06-05T11:52:23.000000Z"
+                        - id: 2
+                          name: PayPal
+                          description: Pay securely with your PayPal account.
+                          created_at: "2025-06-05T11:52:23.000000Z"
+                          updated_at: "2025-06-05T11:52:23.000000Z"
+                        - id: 3
+                          name: Bank Transfer
+                          description: Direct bank transfer payment.
+                          created_at: "2025-06-05T11:52:23.000000Z"
+                          updated_at: "2025-06-05T11:52:23.000000Z"
+                        - id: 4
+                          name: Cash on Delivery
+                          description: Cash or card payment upon arrival.
+                          created_at: "2025-06-05T11:52:23.000000Z"
+                          updated_at: "2025-06-05T11:52:23.000000Z"
+                      first_page_url: "http://127.0.0.1:8000/api/payment-methods?page=1"
+                      from: 1
+                      last_page: 1
+                      last_page_url: "http://127.0.0.1:8000/api/payment-methods?page=1"
+                      links: # Example links, usually more complex
+                        - url: null
+                          label: "« Previous"
+                          active: false
+                        - url: "http://127.0.0.1:8000/api/payment-methods?page=1"
+                          label: "1"
+                          active: true
+                        - url: null
+                          label: "Next »"
+                          active: false
+                      next_page_url: null
+                      path: "http://127.0.0.1:8000/api/payment-methods"
+                      per_page: 15
+                      prev_page_url: null
+                      to: 4
+                      total: 4
+          '500':
+            $ref: '#/components/responses/ServerError'
+
+  /my-bookings:
+    get:
+      summary: Get a list of authenticated user's bookings
+      operationId: listMyBookings
+      tags:
+        - User Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Number of bookings per page.
+      responses:
+        '200':
+          description: List of user's bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBookings'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /bookings: # Updated path from /my-bookings as per api.php
+    post:
+      summary: Create a new booking
+      operationId: createBooking
+      tags:
+        - User Operations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - room_id
+                - check_in_date
+                - check_out_date
+              properties:
+                room_id:
+                  type: integer
+                  format: int64
+                  description: ID of the room to book.
+                  example: 4
+                check_in_date:
+                  type: string
+                  format: date
+                  description: Check-in date (YYYY-MM-DD). Dates must not be in the past, and check_out_date must be after check_in_date.
+                  example: "2025-06-06"
+                check_out_date:
+                  type: string
+                  format: date
+                  description: Check-out date (YYYY-MM-DD).
+                  example: "2025-06-07"
+                user_notes:
+                  type: string
+                  nullable: true
+                  description: Any special requests or notes for the booking.
+                  example: "Need extra towels."
+      responses:
+        '201':
+          description: Booking request submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  booking:
+                    $ref: '#/components/schemas/Booking'
+                  message:
+                    type: string
+                    example: "Booking request submitted successfully. Pending verification." # Updated message
+              examples:
+                bookingSuccess:
+                  value:
+                    booking:
+                      book_id: 31
+                      user_id: 20
+                      room_id: 4
+                      hotel_id: 2
+                      booking_status: pending_verification
+                      booking_date: "2025-06-05T00:00:00.000000Z"
+                      check_in_date: "2025-06-06T00:00:00.000000Z"
+                      check_out_date: "2025-06-07T00:00:00.000000Z"
+                      duration_nights: 1
+                      total_price: "439.97"
+                      user_notes: "string"
+                      updated_at: "2025-06-05T13:44:01.000000Z"
+                      created_at: "2025-06-05T13:44:01.000000Z"
+                      room:
+                        room_id: 4
+                        hotel_id: 2
+                        max_occupancy: 4
+                        price_per_night: "439.97"
+                        services: AC, TV
+                        photos_json: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg"]
+                        videos_json: ["https://www.youtube.com/watch?v=mxLpKetxhlg"]
+                        payment_link: "https://hotelvossiusvondelpark.com/en/"
+                        notes: Voluptas molestias minus sint nihil qui.
+                        created_at: "2025-06-05T11:52:23.000000Z"
+                        updated_at: "2025-06-05T12:18:06.000000Z"
+                        hotel:
+                          hotel_id: 2
+                          name: Lang, Nader and Weimann Hotel
+                          location: "South Rosaliamouth, 683 Angelica Common"
+                          rating: 4.1
+                          notes: Dolores non eos eum dolor recusandae.
+                          contact_person_phone: "+19253003335"
+                          admin_user_id: 2
+                          photos_json: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg"]
+                          videos_json: ["https://youtube.com"]
+                          created_at: "2025-06-05T11:52:23.000000Z"
+                          updated_at: "2025-06-05T12:15:22.000000Z"
+                    message: "Booking request submitted successfully. Pending verification."
+        '400':
+          description: Bad Request, e.g., insufficient balance or invalid dates.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Insufficient balance. Please add funds." # Added example for insufficient balance
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /my-bookings/{booking}:
+    get:
+      summary: Get details of a specific booking for the authenticated user
+      operationId: getMyBookingDetails
+      tags:
+        - User Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: booking
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the booking to retrieve.
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /my-bookings/{booking}/cancel:
+    post:
+      summary: Request cancellation of a booking
+      operationId: cancelBooking
+      tags:
+        - User Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: booking
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the booking to cancel.
+          example: 31
+      responses:
+        '200':
+          description: Booking cancellation request processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Booking cancelled successfully. Amount refunded to your balance." # Updated message
+                  booking:
+                    $ref: '#/components/schemas/Booking'
+              examples:
+                cancelSuccess:
+                  value:
+                    message: "Booking cancelled successfully. Amount refunded to your balance."
+                    booking:
+                      book_id: 31
+                      user_id: 20
+                      room_id: 4
+                      hotel_id: 2
+                      booking_status: cancelled
+                      booking_date: "2025-06-05T00:00:00.000000Z"
+                      check_in_date: "2025-06-06T00:00:00.000000Z"
+                      check_out_date: "2025-06-07T00:00:00.000000Z"
+                      duration_nights: 1
+                      total_price: "439.97"
+                      user_notes: "string"
+                      created_at: "2025-06-05T13:44:01.000000Z"
+                      updated_at: "2025-06-05T14:45:16.000000Z"
+                      room:
+                        room_id: 4
+                        hotel_id: 2
+                        max_occupancy: 4
+                        price_per_night: "439.97"
+                        services: AC, TV
+                        photos_json: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg"]
+                        videos_json: ["https://www.youtube.com/watch?v=mxLpKetxhlg"]
+                        payment_link: "https://hotelvossiusvondelpark.com/en/"
+                        notes: "Voluptas molestias minus sint nihil qui."
+                        created_at: "2025-06-05T11:52:23.000000Z"
+                        updated_at: "2025-06-05T12:18:06.000000Z"
+                        hotel:
+                          hotel_id: 2
+                          name: Lang, Nader and Weimann Hotel
+                          location: "South Rosaliamouth, 683 Angelica Common"
+                          rating: 4.1
+                          notes: "Dolores non eos eum dolor recusandae."
+                          contact_person_phone: "+19253003335"
+                          admin_user_id: 2
+                          photos_json: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg"]
+                          videos_json: ["https://youtube.com"]
+                          created_at: "2025-06-05T11:52:23.000000Z"
+                          updated_at: "2025-06-05T12:15:22.000000Z"
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /my-balance:
+    get:
+      summary: Get authenticated user's balance and transaction history
+      operationId: getMyBalance
+      tags:
+        - User Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of transactions per page.
+      responses:
+        '200':
+          description: User balance and transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balance:
+                    type: string
+                    description: Current balance (formatted string).
+                    example: "9,560.03" # Updated example
+                  currency:
+                    type: string
+                    description: Currency code (e.g., USD).
+                    example: "USD"
+                  transactions:
+                    $ref: '#/components/schemas/PaginatedTransactions'
+              examples:
+                userBalanceDetails:
+                  value:
+                    balance: "9,560.03"
+                    currency: "USD"
+                    transactions:
+                      current_page: 1
+                      data:
+                        - transaction_id: 87
+                          user_id: 20
+                          booking_id: 31
+                          amount: "439.97"
+                          transaction_type: debit
+                          reason: booking_payment
+                          transaction_date: "2025-06-05T13:44:01.000000Z"
+                          created_at: "2025-06-05T13:44:01.000000Z"
+                          updated_at: "2025-06-05T13:44:01.000000Z"
+                        - transaction_id: 86
+                          user_id: 20
+                          booking_id: null
+                          amount: "10000.00"
+                          transaction_type: credit
+                          reason: deposit
+                          transaction_date: "2025-06-05T13:43:17.000000Z"
+                          created_at: "2025-06-05T13:43:17.000000Z"
+                          updated_at: "2025-06-05T13:43:17.000000Z"
+                      first_page_url: "http://127.0.0.1:8000/api/my-balance?page=1"
+                      from: 1
+                      last_page: 1
+                      last_page_url: "http://127.0.0.1:8000/api/my-balance?page=1"
+                      links:
+                        - url: null
+                          label: "&laquo; Previous"
+                          active: false
+                        - url: "http://127.0.0.1:8000/api/my-balance?page=1"
+                          label: "1"
+                          active: true
+                        - url: null
+                          label: "Next &raquo;"
+                          active: false
+                      next_page_url: null
+                      path: "http://127.0.0.1:8000/api/my-balance"
+                      per_page: 15
+                      prev_page_url: null
+                      to: 2
+                      total: 2
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /add-funds:
+    post:
+      summary: Add funds to authenticated user's balance (simulated)
+      operationId: addFunds
+      tags:
+        - User Operations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - payment_method_id
+              properties:
+                amount:
+                  type: number # Input can still be number, backend converts to string for display
+                  format: float
+                  minimum: 1
+                  description: Amount to add.
+                  example: 10000
+                payment_method_id:
+                  type: integer
+                  format: int64
+                  description: ID of the payment method used.
+                  example: 1
+      responses:
+        '201':
+          description: Funds added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Funds added successfully (simulated)." # Updated message
+                  transaction:
+                    $ref: '#/components/schemas/Transaction'
+              examples:
+                addFundsSuccess:
+                  value:
+                    message: "Funds added successfully (simulated)."
+                    transaction:
+                      user_id: 20
+                      amount: "10000.00"
+                      transaction_type: credit
+                      reason: deposit
+                      transaction_date: "2025-06-05T13:43:17.000000Z"
+                      booking_id: null
+                      updated_at: "2025-06-05T13:43:17.000000Z"
+                      created_at: "2025-06-05T13:43:17.000000Z"
+                      transaction_id: 86
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /hotel-admin-requests: # This path is for submitting requests
+    post:
+      summary: Submit a request to become a hotel admin
+      operationId: submitHotelAdminRequest
+      tags:
+        - User Operations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - requested_hotel_name
+                - requested_hotel_location
+                - requested_contact_phone
+              properties:
+                requested_hotel_name:
+                  type: string
+                  description: Name of the hotel to be managed.
+                  example: New Grand Hotel
+                requested_hotel_location:
+                  type: string
+                  description: Location of the hotel.
+                  example: Downtown City
+                requested_contact_phone:
+                  type: string
+                  description: Contact phone number for the hotel.
+                  example: "+1-555-123-4567"
+                photos: # Input field name as seen in provided body
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of photo URLs for the hotel.
+                  example: ["http://example.com/hotel_photo1.jpg"]
+                videos: # Input field name as seen in provided body
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of video URLs for the hotel.
+                  example: ["http://example.com/hotel_video1.mp4"]
+                request_notes:
+                  type: string
+                  nullable: true
+                  description: Any additional notes for the request.
+                  example: "I have experience managing hotels."
+      responses:
+        '201':
+          description: Hotel admin request submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  request:
+                    $ref: '#/components/schemas/HotelAdminRequest'
+                  message:
+                    type: string
+                    example: "Hotel admin request submitted successfully. Waiting for review." # Updated message
+              examples:
+                requestSubmitted:
+                  value:
+                    request:
+                      request_id: 11
+                      user_id: 20
+                      requested_hotel_name: string
+                      requested_hotel_location: string
+                      requested_contact_phone: string
+                      requested_photos_json: ["http://example.com/hotel_photo1.jpg"]
+                      requested_videos_json: ["http://example.com/hotel_video1.mp4"]
+                      request_notes: string
+                      request_status: pending
+                      updated_at: "2025-06-05T14:39:55.000000Z"
+                      created_at: "2025-06-05T14:39:55.000000Z"
+                    message: "Hotel admin request submitted successfully. Waiting for review."
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /my-hotel-admin-requests: # Corrected path for user's requests
+    get:
+      summary: Get authenticated user's hotel admin requests
+      operationId: listMyHotelAdminRequests
+      tags:
+        - User Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of requests per page.
+      responses:
+        '200':
+          description: List of user's hotel admin requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHotelAdminRequests'
+              examples:
+                myRequestsList:
+                  value:
+                    current_page: 1
+                    data:
+                      - request_id: 11
+                        user_id: 20
+                        requested_hotel_name: string
+                        requested_hotel_location: string
+                        requested_contact_phone: string
+                        requested_photos_json: ["http://example.com/hotel_photo1.jpg"]
+                        requested_videos_json: ["http://example.com/hotel_video1.mp4"]
+                        request_notes: string
+                        request_status: pending
+                        reviewed_by_user_id: null
+                        review_timestamp: null
+                        created_at: "2025-06-05T14:39:55.000000Z"
+                        updated_at: "2025-06-05T14:39:55.000000Z"
+                    first_page_url: "http://127.0.0.1:8000/api/my-hotel-admin-requests?page=1"
+                    from: 1
+                    last_page: 1
+                    last_page_url: "http://127.0.0.1:8000/api/my-hotel-admin-requests?page=1"
+                    links:
+                      - url: null
+                        label: "&laquo; Previous"
+                        active: false
+                      - url: "http://127.0.0.1:8000/api/my-hotel-admin-requests?page=1"
+                        label: "1"
+                        active: true
+                      - url: null
+                        label: "Next &raquo;"
+                        active: false
+                    next_page_url: null
+                    path: "http://127.0.0.1:8000/api/my-hotel-admin-requests"
+                    per_page: 15
+                    prev_page_url: null
+                    to: 1
+                    total: 1
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /my-hotel-admin-requests/{hotelAdminRequest}: # Corrected path for user's specific request
+    get:
+      summary: Get details of a specific hotel admin request for the authenticated user
+      operationId: getMyHotelAdminRequestDetails
+      tags:
+        - User Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: hotelAdminRequest
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the request to retrieve.
+          example: 11
+      responses:
+        '200':
+          description: Hotel admin request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HotelAdminRequest'
+              examples:
+                myRequestDetails:
+                  value:
+                    request_id: 11
+                    user_id: 20
+                    requested_hotel_name: string
+                    requested_hotel_location: string
+                    requested_contact_phone: string
+                    requested_photos_json: ["http://example.com/hotel_photo1.jpg"]
+                    requested_videos_json: ["http://example.com/hotel_video1.mp4"]
+                    request_notes: string
+                    request_status: pending
+                    reviewed_by_user_id: null
+                    review_timestamp: null
+                    created_at: "2025-06-05T14:39:55.000000Z"
+                    updated_at: "2025-06-05T14:39:55.000000Z"
+                    user:
+                      user_id: 20
+                      username: string
+                      role: user
+                      first_name: string
+                      last_name: string
+                      phone_number: string
+                      address: string
+                      gender: male
+                      age: 0
+                      email: user@example.com
+                      email_verified_at: null
+                      created_at: "2025-06-05T13:14:54.000000Z"
+                      updated_at: "2025-06-05T13:14:54.000000Z"
+                    reviewer: null
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /hotel-admin/hotel:
+    get:
+      summary: Get details of the hotel managed by the authenticated hotel admin
+      operationId: getHotelAdminHotelDetails
+      tags:
+        - Hotel Admin Operations
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Hotel details for the hotel admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hotel'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: No hotel found for this admin.
+
+    put:
+      summary: Update details of the hotel managed by the authenticated hotel admin
+      operationId: updateHotelAdminHotelDetails
+      tags:
+        - Hotel Admin Operations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Hotel name.
+                location:
+                  type: string
+                  nullable: true
+                  description: Hotel location.
+                rating:
+                  type: number
+                  format: float
+                  nullable: true
+                  minimum: 0
+                  maximum: 5
+                  description: Hotel rating.
+                notes:
+                  type: string
+                  nullable: true
+                  description: General notes about the hotel.
+                contact_person_phone:
+                  type: string
+                  nullable: true
+                  description: Contact phone for the hotel.
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of photo URLs.
+                videos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of video URLs.
+      responses:
+        '200':
+          description: Hotel information updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hotel:
+                    $ref: '#/components/schemas/Hotel'
+                  message:
+                    type: string
+                    example: "Hotel information updated successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /hotel-admin/hotel/balance:
+    get:
+      summary: Get financial overview for the hotel admin's hotel earnings
+      operationId: getHotelAdminHotelBalance
+      tags:
+        - Hotel Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Number of recent transactions per page.
+      responses:
+        '200':
+          description: Hotel admin's financial data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hotel_name:
+                    type: string
+                  total_earnings:
+                    type: string
+                    description: Formatted total earnings.
+                    example: "54321.89"
+                  currency:
+                    type: string
+                    example: "USD"
+                  recent_transactions:
+                    $ref: '#/components/schemas/PaginatedTransactions'
+                  message:
+                    type: string
+                    example: "Hotel financial overview retrieved successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: No hotel found for this admin.
+
+  /hotel-admin/rooms:
+    get:
+      summary: Get a list of rooms for the authenticated hotel admin's hotel
+      operationId: listHotelAdminRooms
+      tags:
+        - Hotel Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of rooms per page.
+      responses:
+        '200':
+          description: List of rooms for the hotel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRooms'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    post:
+      summary: Add a new room to the authenticated hotel admin's hotel
+      operationId: createHotelAdminRoom
+      tags:
+        - Hotel Admin Operations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - max_occupancy
+                - price_per_night
+              properties:
+                max_occupancy:
+                  type: integer
+                  description: Maximum number of people the room can accommodate.
+                price_per_night:
+                  type: number # Input can be number
+                  format: float
+                  minimum: 0
+                  description: Price per night for the room.
+                services:
+                  type: string
+                  nullable: true
+                  description: Services offered in the room (e.g., "WiFi, Breakfast").
+                notes:
+                  type: string
+                  nullable: true
+                  description: Any specific notes about the room.
+                payment_link:
+                  type: string
+                  format: url
+                  nullable: true
+                  description: Optional payment link for this room.
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of photo URLs for the room.
+                videos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of video URLs for the room.
+      responses:
+        '201':
+          description: Room created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room:
+                    $ref: '#/components/schemas/Room'
+                  message:
+                    type: string
+                    example: "Room created successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /hotel-admin/rooms/{room}:
+    get:
+      summary: Get details of a specific room in the hotel admin's hotel
+      operationId: getHotelAdminRoomDetails
+      tags:
+        - Hotel Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: room
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the room to retrieve.
+      responses:
+        '200':
+          description: Room details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update a specific room in the hotel admin's hotel
+      operationId: updateHotelAdminRoom
+      tags:
+        - Hotel Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: room
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the room to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - max_occupancy
+                - price_per_night
+              properties:
+                max_occupancy:
+                  type: integer
+                  description: Maximum number of people the room can accommodate.
+                price_per_night:
+                  type: number # Input can be number
+                  format: float
+                  minimum: 0
+                  description: Price per night for the room.
+                services:
+                  type: string
+                  nullable: true
+                  description: Services offered in the room.
+                notes:
+                  type: string
+                  nullable: true
+                  description: Any specific notes about the room.
+                payment_link:
+                  type: string
+                  format: url
+                  nullable: true
+                  description: Optional payment link for this room.
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of photo URLs for the room.
+                videos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of video URLs for the room.
+      responses:
+        '200':
+          description: Room updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room:
+                    $ref: '#/components/schemas/Room'
+                  message:
+                    type: string
+                    example: "Room updated successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      summary: Delete a specific room from the hotel admin's hotel
+      operationId: deleteHotelAdminRoom
+      tags:
+        - Hotel Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: room
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the room to delete.
+      responses:
+        '204':
+          description: Room deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /hotel-admin/bookings:
+    get:
+      summary: Get a list of bookings for the hotel admin's hotel
+      operationId: listHotelAdminBookings
+      tags:
+        - Hotel Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of bookings per page.
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending_verification, confirmed, rejected, cancelled]
+          description: Filter bookings by status.
+      responses:
+        '200':
+          description: List of bookings for the hotel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBookings'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /hotel-admin/bookings/{booking}:
+    get:
+      summary: Get details of a specific booking for the hotel admin's hotel
+      operationId: getHotelAdminBookingDetails
+      tags:
+        - Hotel Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: booking
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the booking to retrieve.
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update the status of a specific booking (confirm/reject) by hotel admin
+      operationId: updateHotelAdminBookingStatus
+      tags:
+        - Hotel Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: booking
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the booking to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [confirmed, rejected]
+                  description: New status for the booking.
+      responses:
+        '200':
+          description: Booking status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Booking status updated successfully."
+                  booking:
+                    $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /hotel-admin/financials:
+    get:
+      summary: Get financial overview for the hotel admin's hotel earnings
+      operationId: getHotelAdminFinancials
+      tags:
+        - Hotel Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Number of recent transactions per page.
+      responses:
+        '200':
+          description: Hotel admin's financial data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hotel_name:
+                    type: string
+                  total_earnings:
+                    type: string
+                    description: Formatted total earnings.
+                    example: "54321.89"
+                  currency:
+                    type: string
+                    example: "USD"
+                  recent_transactions:
+                    $ref: '#/components/schemas/PaginatedTransactions'
+                  message:
+                    type: string
+                    example: "Hotel financial overview retrieved successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: No hotel found for this admin.
+
+  /admin/users:
+    get:
+      summary: Get a list of all users (App Admin)
+      operationId: listAdminUsers
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of users per page.
+        - in: query
+          name: role
+          schema:
+            type: string
+            enum: [user, hotel_admin, app_admin]
+          description: Filter users by role.
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search users by username, email, name, or phone number.
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUsers'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+    post:
+      summary: Create a new user (App Admin)
+      operationId: createAdminUser
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - password
+                - password_confirmation
+                - first_name
+                - role
+              properties:
+                username:
+                  type: string
+                  description: Unique username.
+                email:
+                  type: string
+                  format: email
+                  description: Unique email.
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  description: User password.
+                password_confirmation:
+                  type: string
+                  format: password
+                  description: Password confirmation.
+                first_name:
+                  type: string
+                  description: User's first name.
+                last_name:
+                  type: string
+                  nullable: true
+                  description: User's last name.
+                phone_number:
+                  type: string
+                  nullable: true
+                  description: User's phone number.
+                address:
+                  type: string
+                  nullable: true
+                  description: User's address.
+                gender:
+                  type: string
+                  enum: [male, female, other]
+                  nullable: true
+                  description: User's gender.
+                age:
+                  type: integer
+                  nullable: true
+                  minimum: 0
+                  description: User's age.
+                role:
+                  type: string
+                  enum: [user, hotel_admin, app_admin]
+                  description: User's role.
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  message:
+                    type: string
+                    example: "User created successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /admin/users/{user}:
+    get:
+      summary: Get details of a specific user (App Admin)
+      operationId: getAdminUserDetails
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: user
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the user to retrieve.
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Update a specific user (App Admin)
+      operationId: updateAdminUser
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: user
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the user to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - first_name
+                - role
+              properties:
+                username:
+                  type: string
+                  description: Unique username.
+                email:
+                  type: string
+                  format: email
+                  description: Unique email.
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  nullable: true
+                  description: New password (optional).
+                password_confirmation:
+                  type: string
+                  format: password
+                  nullable: true
+                  description: Password confirmation.
+                first_name:
+                  type: string
+                  description: User's first name.
+                last_name:
+                  type: string
+                  nullable: true
+                  description: User's last name.
+                phone_number:
+                  type: string
+                  nullable: true
+                  description: User's phone number.
+                address:
+                  type: string
+                  nullable: true
+                  description: User's address.
+                gender:
+                  type: string
+                  enum: [male, female, other]
+                  nullable: true
+                  description: User's gender.
+                age:
+                  type: integer
+                  nullable: true
+                  minimum: 0
+                  description: User's age.
+                role:
+                  type: string
+                  enum: [user, hotel_admin, app_admin]
+                  description: User's role.
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  message:
+                    type: string
+                    example: "User updated successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      summary: Delete a specific user (App Admin)
+      operationId: deleteAdminUser
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: user
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the user to delete.
+      responses:
+        '204':
+          description: User deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/hotels:
+    get:
+      summary: Get a list of all hotels (App Admin)
+      operationId: listAdminHotels
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of hotels per page.
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search hotels by name or location.
+        - in: query
+          name: admin_user_id
+          schema:
+            type: integer
+            format: int64
+          description: Filter hotels by assigned admin user ID.
+      responses:
+        '200':
+          description: List of hotels
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHotels'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+    post:
+      summary: Create a new hotel (App Admin)
+      operationId: createAdminHotel
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Hotel name.
+                location:
+                  type: string
+                  nullable: true
+                  description: Hotel location.
+                rating:
+                  type: number
+                  format: float
+                  nullable: true
+                  minimum: 0
+                  maximum: 5
+                  description: Hotel rating.
+                notes:
+                  type: string
+                  nullable: true
+                  description: General notes about the hotel.
+                contact_person_phone:
+                  type: string
+                  nullable: true
+                  description: Contact phone for the hotel.
+                admin_user_id:
+                  type: integer
+                  format: int64
+                  nullable: true
+                  description: ID of the hotel admin user to assign.
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of photo URLs.
+                videos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of video URLs.
+      responses:
+        '201':
+          description: Hotel created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hotel:
+                    $ref: '#/components/schemas/Hotel'
+                  message:
+                    type: string
+                    example: "Hotel created successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /admin/hotels/{hotel}:
+    get:
+      summary: Get details of a specific hotel (App Admin)
+      operationId: getAdminHotelDetails
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: hotel
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the hotel to retrieve.
+      responses:
+        '200':
+          description: Hotel details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hotel'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Update a specific hotel (App Admin)
+      operationId: updateAdminHotel
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: hotel
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the hotel to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Hotel name.
+                location:
+                  type: string
+                  nullable: true
+                  description: Hotel location.
+                rating:
+                  type: number
+                  format: float
+                  nullable: true
+                  minimum: 0
+                  maximum: 5
+                  description: Hotel rating.
+                notes:
+                  type: string
+                  nullable: true
+                  description: General notes about the hotel.
+                contact_person_phone:
+                  type: string
+                  nullable: true
+                  description: Contact phone for the hotel.
+                admin_user_id:
+                  type: integer
+                  format: int64
+                  nullable: true
+                  description: ID of the hotel admin user to assign.
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of photo URLs.
+                videos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of video URLs.
+      responses:
+        '200':
+          description: Hotel updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hotel:
+                    $ref: '#/components/schemas/Hotel'
+                  message:
+                    type: string
+                    example: "Hotel updated successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      summary: Delete a specific hotel (App Admin)
+      operationId: deleteAdminHotel
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: hotel
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the hotel to delete.
+      responses:
+        '204':
+          description: Hotel deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/hotels/{hotel}/rooms: # This path is for shallow nesting
+    get:
+      summary: Get rooms for a specific hotel (App Admin)
+      operationId: listAdminRoomsForHotel
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: hotel
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the hotel to list rooms for.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of rooms per page.
+      responses:
+        '200':
+          description: List of rooms for the specified hotel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRooms'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Create a new room for a specific hotel (App Admin)
+      operationId: createAdminRoomForHotel
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: hotel
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the hotel to add a room to.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - max_occupancy
+                - price_per_night
+              properties:
+                max_occupancy:
+                  type: integer
+                  description: Maximum number of people the room can accommodate.
+                price_per_night:
+                  type: number # Input can be number
+                  format: float
+                  minimum: 0
+                  description: Price per night for the room.
+                services:
+                  type: string
+                  nullable: true
+                  description: Services offered in the room.
+                notes:
+                  type: string
+                  nullable: true
+                  description: Any specific notes about the room.
+                payment_link:
+                  type: string
+                  format: url
+                  nullable: true
+                  description: Optional payment link for this room.
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of photo URLs.
+                videos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of video URLs.
+      responses:
+        '201':
+          description: Room created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room:
+                    $ref: '#/components/schemas/Room'
+                  message:
+                    type: string
+                    example: "Room created successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /admin/rooms/{room}: # Shallow path for Admin Room operations
+    get:
+      summary: Get details of a specific room (App Admin)
+      operationId: getAdminRoomDetails
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: room
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the room to retrieve.
+      responses:
+        '200':
+          description: Room details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Update a specific room (App Admin)
+      operationId: updateAdminRoom
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: room
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the room to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - max_occupancy
+                - price_per_night
+              properties:
+                max_occupancy:
+                  type: integer
+                  description: Maximum number of people the room can accommodate.
+                price_per_night:
+                  type: number # Input can be number
+                  format: float
+                  minimum: 0
+                  description: Price per night for the room.
+                services:
+                  type: string
+                  nullable: true
+                  description: Services offered in the room.
+                notes:
+                  type: string
+                  nullable: true
+                  description: Any specific notes about the room.
+                payment_link:
+                  type: string
+                  format: url
+                  nullable: true
+                  description: Optional payment link for this room.
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of photo URLs.
+                videos:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                  nullable: true
+                  description: Array of video URLs.
+      responses:
+        '200':
+          description: Room updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room:
+                    $ref: '#/components/schemas/Room'
+                  message:
+                    type: string
+                    example: "Room updated successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      summary: Delete a specific room (App Admin)
+      operationId: deleteAdminRoom
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: room
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the room to delete.
+      responses:
+        '204':
+          description: Room deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/faqs:
+    get:
+      summary: Get a list of all FAQs (App Admin)
+      operationId: listAdminFaqs
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of FAQs per page.
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search FAQs by question or answer.
+      responses:
+        '200':
+          description: List of FAQs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFaqs'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+    post:
+      summary: Create a new FAQ (App Admin)
+      operationId: createAdminFaq
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - question
+                - answer
+              properties:
+                question:
+                  type: string
+                  description: The question of the FAQ.
+                answer:
+                  type: string
+                  description: The answer to the FAQ.
+      responses:
+        '201':
+          description: FAQ created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  faq:
+                    $ref: '#/components/schemas/Faq'
+                  message:
+                    type: string
+                    example: "FAQ created successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /admin/faqs/{faq}:
+    get:
+      summary: Get details of a specific FAQ (App Admin)
+      operationId: getAdminFaqDetails
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: faq
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the FAQ to retrieve.
+      responses:
+        '200':
+          description: FAQ details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Faq'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Update a specific FAQ (App Admin)
+      operationId: updateAdminFaq
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: faq
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the FAQ to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - question
+                - answer
+              properties:
+                question:
+                  type: string
+                  description: The question of the FAQ.
+                answer:
+                  type: string
+                  description: The answer to the FAQ.
+      responses:
+        '200':
+          description: FAQ updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  faq:
+                    $ref: '#/components/schemas/Faq'
+                  message:
+                    type: string
+                    example: "FAQ updated successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      summary: Delete a specific FAQ (App Admin)
+      operationId: deleteAdminFolds
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: faq
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the FAQ to delete.
+      responses:
+        '204':
+          description: FAQ deleted successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/hotel-admin-requests:
+    get:
+      summary: Get a list of hotel admin requests (App Admin)
+      operationId: listAdminHotelAdminRequests
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of requests per page.
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+          description: Filter requests by status.
+      responses:
+        '200':
+          description: List of hotel admin requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHotelAdminRequests'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/hotel-admin-requests/{hotelAdminRequest}:
+    get:
+      summary: Get details of a specific hotel admin request (App Admin)
+      operationId: getAdminHotelAdminRequestDetails
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: hotelAdminRequest
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the request to retrieve.
+      responses:
+        '200':
+          description: Hotel admin request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HotelAdminRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/hotel-admin-requests/{hotelAdminRequest}/status:
+    patch:
+      summary: Update the status of a hotel admin request (App Admin)
+      operationId: updateAdminHotelAdminRequestStatus
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: hotelAdminRequest
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the request to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [approved, rejected]
+                  description: New status for the request.
+                rejection_reason:
+                  type: string
+                  nullable: true
+                  description: Reason for rejection (if status is rejected).
+      responses:
+        '200':
+          description: Request status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Request status updated successfully."
+                  request:
+                    $ref: '#/components/schemas/HotelAdminRequest'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /admin/financials/overview:
+    get:
+      summary: Get global financial overview and aggregated reports (App Admin)
+      operationId: getAdminFinancialOverview
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Financial overview data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_platform_revenue:
+                    type: string
+                    example: "123456.78"
+                  total_hotel_commissions_paid:
+                    type: string
+                    example: "12345.67"
+                  total_user_deposits:
+                    type: string
+                    example: "98765.43"
+                  total_booking_payments:
+                    type: string
+                    example: "76543.21"
+                  total_booking_refunds:
+                    type: string
+                    example: "1000.00"
+                  currency:
+                    type: string
+                    example: "USD"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/financials/transactions:
+    get:
+      summary: Get a list of all transactions in the system (App Admin)
+      operationId: listAdminTransactions
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 25
+          description: Number of transactions per page.
+        - in: query
+          name: user_id
+          schema:
+            type: integer
+            format: int64
+          description: Filter transactions by user ID.
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [credit, debit]
+          description: Filter transactions by type (credit/debit).
+        - in: query
+          name: reason
+          schema:
+            type: string
+            enum: [deposit, booking_payment, booking_refund, hotel_commission, admin_commission, cancellation_fee, transfer]
+          description: Filter transactions by reason.
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+          description: Filter transactions from this date (YYYY-MM-DD).
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+          description: Filter transactions up to this date (YYYY-MM-DD).
+      responses:
+        '200':
+          description: List of all transactions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTransactions'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/financials/bookings/{booking}/process-commissions:
+    post:
+      summary: Manually process commissions for a confirmed booking (App Admin)
+      operationId: processAdminBookingCommissions
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: booking
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the booking to process commissions for.
+      responses:
+        '200':
+          description: Commissions processing complete.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Commissions processing complete."
+                  details:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - "Commission for booking 1 processed for Hotel X: $50.00"
+                      - "Admin commission for booking 1 recorded: $10.00"
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /admin/payment-methods:
+    get:
+      summary: Get a list of all payment methods (App Admin)
+      operationId: listAdminPaymentMethods
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of payment methods per page.
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search payment methods by name or description.
+      responses:
+        '200':
+          description: List of payment methods
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPaymentMethods'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+    post:
+      summary: Create a new payment method (App Admin)
+      operationId: createAdminPaymentMethod
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Name of the payment method.
+                description:
+                  type: string
+                  nullable: true
+                  description: Description of the payment method.
+      responses:
+        '201':
+          description: Payment method created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment_method:
+                    $ref: '#/components/schemas/PaymentMethod'
+                  message:
+                    type: string
+                    example: "Payment method created successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /admin/payment-methods/{payment_method}:
+    get:
+      summary: Get details of a specific payment method (App Admin)
+      operationId: getAdminPaymentMethodDetails
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: payment_method
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the payment method to retrieve.
+      responses:
+        '200':
+          description: Payment method details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethod'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Update a specific payment method (App Admin)
+      operationId: updateAdminPaymentMethod
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: payment_method
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the payment method to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Name of the payment method.
+                description:
+                  type: string
+                  nullable: true
+                  description: Description of the payment method.
+      responses:
+        '200':
+          description: Payment method updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment_method:
+                    $ref: '#/components/schemas/PaymentMethod'
+                  message:
+                    type: string
+                    example: "Payment method updated successfully."
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      summary: Delete a specific payment method (App Admin)
+      operationId: deleteAdminPaymentMethod
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: payment_method
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the payment method to delete.
+      responses:
+        '204':
+          description: Payment method deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/bookings:
+    get:
+      summary: Get a list of all bookings (App Admin)
+      operationId: listAdminBookings
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 15
+          description: Number of bookings per page.
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending_verification, confirmed, rejected, cancelled]
+          description: Filter bookings by status.
+        - in: query
+          name: user_id
+          schema:
+            type: integer
+            format: int64
+          description: Filter bookings by user ID.
+        - in: query
+          name: hotel_id
+          schema:
+            type: integer
+            format: int64
+          description: Filter bookings by hotel ID.
+      responses:
+        '200':
+          description: List of all bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBookings'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/bookings/{booking}:
+    get:
+      summary: Get details of a specific booking (App Admin)
+      operationId: getAdminBookingDetails
+      tags:
+        - App Admin Operations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: booking
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the booking to retrieve.
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: int64
+          description: Unique identifier for the user.
+          example: 20
+        username:
+          type: string
+          description: User's unique username.
+          example: string
+        email:
+          type: string
+          format: email
+          description: User's unique email address.
+          example: user@example.com
+        email_verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when email was verified.
+          example: null
+        role:
+          type: string
+          enum: [user, hotel_admin, app_admin]
+          description: User's role.
+          example: user
+        first_name:
+          type: string
+          description: User's first name.
+          example: string
+        last_name:
+          type: string
+          nullable: true
+          description: User's last name.
+          example: string
+        phone_number:
+          type: string
+          nullable: true
+          description: User's phone number.
+          example: "+1234567890"
+        address:
+          type: string
+          nullable: true
+          description: User's address.
+          example: "123 Main St"
+        gender:
+          type: string
+          enum: [male, female, other]
+          nullable: true
+          description: User's gender.
+          example: male
+        age:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: User's age.
+          example: 30
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the user was created.
+          example: "2025-06-05T13:14:54.000000Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the user was last updated.
+          example: "2025-06-05T13:14:54.000000Z"
+    Hotel:
+      type: object
+      properties:
+        hotel_id:
+          type: integer
+          format: int64
+          description: Unique identifier for the hotel.
+          example: 2
+        name:
+          type: string
+          description: Name of the hotel.
+          example: Lang, Nader and Weimann Hotel
+        location:
+          type: string
+          nullable: true
+          description: Location of the hotel.
+          example: "South Rosaliamouth, 683 Angelica Common\r\nNew Dorianborough, DE 37301-7021"
+        rating:
+          type: number
+          format: float
+          nullable: true
+          minimum: 0
+          maximum: 5
+          description: Rating of the hotel.
+          example: 4.1
+        notes:
+          type: string
+          nullable: true
+          description: General notes about the hotel.
+          example: Dolores non eos eum dolor recusandae. Ab consectetur officia quia cumque.
+        contact_person_phone:
+          type: string
+          nullable: true
+          description: Contact phone number for the hotel.
+          example: "+19253003335"
+        admin_user_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: ID of the user who manages this hotel (hotel_admin role).
+          example: 2
+        photos_json:
+          type: array
+          items:
+            type: string
+            format: url
+          nullable: true
+          description: Array of photo URLs for the hotel.
+          example: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg"]
+        videos_json:
+          type: array
+          items:
+            type: string
+            format: url
+          nullable: true
+          description: Array of video URLs for the hotel.
+          example: ["https://youtube.com"]
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-06-05T11:52:23.000000Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-06-05T12:15:22.000000Z"
+        rooms: # Included when eagerly loaded
+          type: array
+          items:
+            $ref: '#/components/schemas/Room'
+          description: Rooms associated with this hotel.
+    Room:
+      type: object
+      properties:
+        room_id:
+          type: integer
+          format: int64
+          description: Unique identifier for the room.
+          example: 4
+        hotel_id:
+          type: integer
+          format: int64
+          description: ID of the hotel this room belongs to.
+          example: 2
+        max_occupancy:
+          type: integer
+          description: Maximum number of people the room can accommodate.
+          example: 4
+        price_per_night:
+          type: string # Changed from number to string as per API response
+          description: Price per night for the room.
+          example: "439.97"
+        services:
+          type: string
+          nullable: true
+          description: Services offered in the room (e.g., "WiFi, Breakfast").
+          example: "AC, TV"
+        notes:
+          type: string
+          nullable: true
+          description: Any specific notes about the room.
+          example: "Voluptas molestias minus sint nihil qui."
+        payment_link:
+          type: string
+          format: url
+          nullable: true
+          description: Optional payment link for this room.
+          example: "https://hotelvossiusvondelpark.com/en/"
+        photos_json:
+          type: array
+          items:
+            type: string
+            format: url
+          nullable: true
+          description: Array of photo URLs for the room.
+          example: ["https://www.amrathamsterdam.com/upload/heading/welkom-1500x1000_4.jpg"]
+        videos_json:
+          type: array
+          items:
+            type: string
+            format: url
+          nullable: true
+          description: Array of video URLs for the room.
+          example: ["https://www.youtube.com/watch?v=mxLpKetxhlg"]
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-06-05T11:52:23.000000Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-06-05T12:18:06.000000Z"
+        hotel: # Included when eagerly loaded, as seen in /rooms response
+          $ref: '#/components/schemas/Hotel'
+          description: The hotel this room belongs to.
+    Booking:
+      type: object
+      properties:
+        book_id:
+          type: integer
+          format: int64
+          description: Unique identifier for the booking.
+          example: 31
+        user_id:
+          type: integer
+          format: int64
+          description: ID of the user who made the booking.
+          example: 20
+        room_id:
+          type: integer
+          format: int64
+          description: ID of the room booked.
+          example: 4
+        hotel_id:
+          type: integer
+          format: int64
+          description: Denormalized ID of the hotel booked (for convenience).
+          example: 2
+        booking_status:
+          type: string
+          enum: [pending_verification, confirmed, rejected, cancelled]
+          description: Current status of the booking.
+          example: pending_verification
+        booking_date:
+          type: string
+          format: date-time
+          description: Date and time when the booking was made.
+          example: "2025-06-05T00:00:00.000000Z"
+        check_in_date:
+          type: string
+          format: date
+          description: Check-in date.
+          example: "2025-06-06"
+        check_out_date:
+          type: string
+          format: date
+          description: Check-out date.
+          example: "2025-06-07"
+        duration_nights:
+          type: integer
+          description: Number of nights for the booking.
+          example: 1
+        total_price:
+          type: string # Changed from number to string as per API response
+          description: Total price for the booking.
+          example: "439.97"
+        user_notes:
+          type: string
+          nullable: true
+          description: Any notes from the user regarding the booking.
+          example: "string"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-06-05T13:44:01.000000Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-06-05T13:44:01.000000Z"
+        user: # Included when eagerly loaded
+          $ref: '#/components/schemas/User'
+          description: The user who made this booking.
+        room: # Included when eagerly loaded
+          $ref: '#/components/schemas/Room'
+          description: The room that was booked.
+        transactions: # Included when eagerly loaded
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+          description: Transactions related to this booking.
+    Transaction:
+      type: object
+      properties:
+        transaction_id:
+          type: integer
+          format: int64
+          description: Unique identifier for the transaction.
+          example: 86
+        user_id:
+          type: integer
+          format: int64
+          description: ID of the user involved in the transaction.
+          example: 20
+        booking_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: ID of the related booking (if applicable).
+          example: 31
+        amount:
+          type: string # Changed from number to string as per API response
+          description: Amount of the transaction.
+          example: "10000.00"
+        transaction_type:
+          type: string
+          enum: [credit, debit]
+          description: Type of transaction (credit or debit).
+          example: credit
+        reason:
+          type: string
+          enum: [deposit, booking_payment, booking_refund, hotel_commission, admin_commission, cancellation_fee, transfer]
+          description: Reason for the transaction.
+          example: deposit
+        transaction_date:
+          type: string
+          format: date-time
+          description: Date and time of the transaction.
+          example: "2025-06-05T13:43:17.000000Z"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-06-05T13:43:17.000000Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-06-05T13:43:17.000000Z"
+        user: # Included when eagerly loaded
+          $ref: '#/components/schemas/User'
+          description: The user associated with this transaction.
+        booking: # Included when eagerly loaded
+          $ref: '#/components/schemas/Booking'
+          description: The booking associated with this transaction.
+    Faq:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier for the FAQ.
+          example: 1
+        user_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: ID of the user who created/last updated the FAQ.
+          example: 16
+        question:
+          type: string
+          description: The question of the FAQ.
+          example: كيف يمكنني حجز غرفة؟
+        answer:
+          type: string
+          description: The answer to the FAQ.
+          example: يمكنك حجز غرفة عن طريق تصفح الفنادق المتاحة واختيار الغرفة المناسبة ثم اتباع خطوات الحجز.
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-06-05T11:52:23.000000Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-06-05T11:52:23.000000Z"
+    PaymentMethod:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Unique identifier for the payment method.
+        name:
+          type: string
+          description: Name of the payment method (e.g., "Credit Card", "PayPal").
+        description:
+          type: string
+          nullable: true
+          description: A brief description of the payment method.
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: The timestamp when the payment method was created.
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: The timestamp when the payment method was last updated.
+      required:
+        - id
+        - name
+    HotelAdminRequest:
+      type: object
+      properties:
+        request_id:
+          type: integer
+          format: int64
+          description: Unique identifier for the request.
+          example: 11
+        user_id:
+          type: integer
+          format: int64
+          description: ID of the user who submitted the request.
+          example: 20
+        requested_hotel_name:
+          type: string
+          description: Name of the hotel requested to be managed.
+          example: string
+        requested_hotel_location:
+          type: string
+          nullable: true
+          description: Location of the requested hotel.
+          example: string
+        requested_contact_phone:
+          type: string
+          nullable: true
+          description: Contact phone for the requested hotel.
+          example: string
+        requested_photos_json: # Reflects the actual JSON field name in response
+          type: array
+          items:
+            type: string
+            format: url
+          nullable: true
+          description: Array of photo URLs submitted with the request.
+          example: ["http://example.com/hotel_photo1.jpg"]
+        requested_videos_json: # Reflects the actual JSON field name in response
+          type: array
+          items:
+            type: string
+            format: url
+          nullable: true
+          description: Array of video URLs submitted with the request.
+          example: ["http://example.com/hotel_video1.mp4"]
+        request_notes:
+          type: string
+          nullable: true
+          description: Any notes included in the request.
+          example: "string"
+        request_status:
+          type: string
+          enum: [pending, approved, rejected]
+          description: Current status of the request.
+          example: pending
+        reviewed_by_user_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: ID of the app admin who reviewed the request.
+          example: null
+        review_timestamp:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when the request was reviewed.
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-06-05T14:39:55.000000Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-06-05T14:39:55.000000Z"
+        user: # Included when eagerly loaded
+          $ref: '#/components/schemas/User'
+          description: The user who submitted this request.
+        reviewer: # Included when eagerly loaded
+          $ref: '#/components/schemas/User'
+          description: The admin who reviewed this request.
+    
+    # --- Pagination Schemas ---
+    PaginatedUsers:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        first_page_url:
+          type: string
+          nullable: true
+          example: "http://127.0.0.1:8000/api/admin/users?page=1"
+        from:
+          type: integer
+          nullable: true
+          example: 1
+        last_page:
+          type: integer
+          example: 1
+        last_page_url:
+          type: string
+          nullable: true
+          example: "http://127.0.0.1:8000/api/admin/users?page=1"
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                nullable: true
+              label:
+                type: string
+              active:
+                type: boolean
+        next_page_url:
+          type: string
+          nullable: true
+          example: null
+        path:
+          type: string
+          example: "http://127.0.0.1:8000/api/admin/users"
+        per_page:
+          type: integer
+          example: 15
+        prev_page_url:
+          type: string
+          nullable: true
+          example: null
+        to:
+          type: integer
+          nullable: true
+          example: 5
+        total:
+          type: integer
+          example: 5
+    PaginatedHotels:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hotel'
+        first_page_url:
+          type: string
+          nullable: true
+          example: "http://127.0.0.1:8000/api/hotels?page=1"
+        from:
+          type: integer
+          nullable: true
+          example: 1
+        last_page:
+          type: integer
+          example: 1
+        last_page_url:
+          type: string
+          nullable: true
+          example: "http://127.0.0.1:8000/api/hotels?page=1"
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                nullable: true
+              label:
+                type: string
+              active:
+                type: boolean
+        next_page_url:
+          type: string
+          nullable: true
+          example: null
+        path:
+          type: string
+          example: "http://127.0.0.1:8000/api/hotels"
+        per_page:
+          type: integer
+          example: 15
+        prev_page_url:
+          type: string
+          nullable: true
+          example: null
+        to:
+          type: integer
+          nullable: true
+          example: 5
+        total:
+          type: integer
+          example: 5
+    PaginatedRooms:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Room'
+        first_page_url:
+          type: string
+          nullable: true
+          example: "http://127.0.0.1:8000/api/rooms?page=1"
+        from:
+          type: integer
+          nullable: true
+          example: 1
+        last_page:
+          type: integer
+          example: 2
+        last_page_url:
+          type: string
+          nullable: true
+          example: "http://127.0.0.1:8000/api/rooms?page=2"
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                nullable: true
+              label:
+                type: string
+              active:
+                type: boolean
+        next_page_url:
+          type: string
+          nullable: true
+          example: "http://127.0.0.1:8000/api/rooms?page=2"
+        path:
+          type: string
+          example: "http://127.0.0.1:8000/api/rooms"
+        per_page:
+          type: integer
+          example: 15
+        prev_page_url:
+          type: string
+          nullable: true
+          example: null
+        to:
+          type: integer
+          nullable: true
+          example: 15
+        total:
+          type: integer
+          example: 20
+    PaginatedBookings:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Booking'
+        first_page_url:
+          type: string
+          nullable: true
+        from:
+          type: integer
+          nullable: true
+        last_page:
+          type: integer
+        last_page_url:
+          type: string
+          nullable: true
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                nullable: true
+              label:
+                type: string
+              active:
+                type: boolean
+        next_page_url:
+          type: string
+          nullable: true
+        path:
+          type: string
+        per_page:
+          type: integer
+        prev_page_url:
+          type: string
+          nullable: true
+        to:
+          type: integer
+          nullable: true
+        total:
+          type: integer
+    PaginatedTransactions:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        first_page_url:
+          type: string
+          nullable: true
+          example: "http://127.0.0.1:8000/api/my-balance?page=1"
+        from:
+          type: integer
+          nullable: true
+          example: 1
+        last_page:
+          type: integer
+          example: 1
+        last_page_url:
+          type: string
+          nullable: true
+          example: "http://127.0.0.1:8000/api/my-balance?page=1"
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                nullable: true
+              label:
+                type: string
+              active:
+                type: boolean
+        next_page_url:
+          type: string
+          nullable: true
+          example: null
+        path:
+          type: string
+          example: "http://127.0.0.1:8000/api/my-balance"
+        per_page:
+          type: integer
+          example: 15
+        prev_page_url:
+          type: string
+          nullable: true
+          example: null
+        to:
+          type: integer
+          nullable: true
+          example: 2
+        total:
+          type: integer
+          example: 2
+    PaginatedFaqs:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Faq'
+        first_page_url:
+          type: string
+          nullable: true
+          example: "http://127.0.0.1:8000/api/faqs?page=1"
+        from:
+          type: integer
+          nullable: true
+          example: 1
+        last_page:
+          type: integer
+          example: 1
+        last_page_url:
+          type: string
+          nullable: true
+          example: "http://127.0.0.1:8000/api/faqs?page=1"
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                nullable: true
+              label:
+                type: string
+              active:
+                type: boolean
+        next_page_url:
+          type: string
+          nullable: true
+          example: null
+        path:
+          type: string
+          example: "http://127.0.0.1:8000/api/faqs"
+        per_page:
+          type: integer
+          example: 15
+        prev_page_url:
+          type: string
+          nullable: true
+          example: null
+        to:
+          type: integer
+          nullable: true
+          example: 4
+        total:
+          type: integer
+          example: 4
+    PaginatedHotelAdminRequests:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/HotelAdminRequest'
+        first_page_url:
+          type: string
+          nullable: true
+          example: "http://127.0.0.1:8000/api/my-hotel-admin-requests?page=1"
+        from:
+          type: integer
+          nullable: true
+          example: 1
+        last_page:
+          type: integer
+          example: 1
+        last_page_url:
+          type: string
+          nullable: true
+          example: "http://127.0.0.1:8000/api/my-hotel-admin-requests?page=1"
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                nullable: true
+              label:
+                type: string
+              active:
+                type: boolean
+        next_page_url:
+          type: string
+          nullable: true
+          example: null
+        path:
+          type: string
+          example: "http://127.0.0.1:8000/api/my-hotel-admin-requests"
+        per_page:
+          type: integer
+          example: 15
+        prev_page_url:
+          type: string
+          nullable: true
+          example: null
+        to:
+          type: integer
+          nullable: true
+          example: 1
+        total:
+          type: integer
+          example: 1
+    PaginatedPaymentMethods:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentMethod'
+        first_page_url:
+          type: string
+          nullable: true
+        from:
+          type: integer
+          nullable: true
+        last_page:
+          type: integer
+        last_page_url:
+          type: string
+          nullable: true
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                nullable: true
+              label:
+                type: string
+              active:
+                type: boolean
+        next_page_url:
+          type: string
+          nullable: true
+        path:
+          type: string
+        per_page:
+          type: integer
+        prev_page_url:
+          type: string
+          nullable: true
+        to:
+          type: integer
+          nullable: true
+        total:
+          type: integer
+
+  responses:
+    UnauthorizedError:
+      description: Authentication required or invalid token.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Unauthenticated.
+    ForbiddenError:
+      description: Access denied. User does not have the necessary permissions.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: This action is unauthorized.
+    NotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Resource not found.
+    ValidationError:
+      description: Invalid input provided.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: The given data was invalid.
+              errors:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+    BadRequestError:
+      description: The request could not be understood due to malformed syntax or bad logic.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Bad Request.
+    ServerError:
+      description: An unexpected error occurred on the server.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: An internal server error occurred.
