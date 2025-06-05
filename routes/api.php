@@ -71,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [UserController::class, 'showProfile'])->name('api.profile.show');
     Route::put('/profile', [UserController::class, 'updateProfile'])->name('api.profile.update');
     // Route::delete('/profile', [UserController::class, 'destroyProfile'])->name('api.profile.destroy'); // If user can delete their own profile
+    Route::put('/profile/password', [UserController::class, 'updatePassword'])->name('api.profile.password.update'); // <--- أضف هذا السطر
 
     // Bookings: List current user's bookings
     Route::get('/my-bookings', [BookingController::class, 'index'])->name('api.bookings.my.index');
